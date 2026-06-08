@@ -79,8 +79,8 @@ function TodoCard({ todo, onUpdateTodo, onDeleteTodo }: Pick<TodoPageProps, 'onU
         {todo.description && <p>{todo.description}</p>}
       </div>
       <div className="todo-card-meta">
-        <span>{getPriorityLabel(todo.priority)}</span>
         <span>{todo.source === 'routine' ? '루틴' : '추가'}</span>
+        {todo.source === 'manual' && <span>{getPriorityLabel(todo.priority)}</span>}
         {todo.category && <span>{todo.category}</span>}
         {todo.dueDate && <span>{todo.dueDate}</span>}
       </div>

@@ -137,7 +137,7 @@ function TodoPreviewItem({ todo, mode, onUpdateTodo, onDeleteTodo }: { todo: Tod
       )}
       <div className="todo-preview-content">
         <strong>{todo.title}</strong>
-        <span>{TODO_STATUS_LABELS[todo.status]} · {getPriorityLabel(todo.priority)}{todo.category ? ` · ${todo.category}` : ''}</span>
+        <span>{formatTodoMeta(todo)}</span>
       </div>
       <div className="todo-preview-actions">
         {mode !== 'readonly' && mode !== 'active' && (
@@ -161,6 +161,20 @@ function StatItem({ label, value }: { label: string; value: string }) {
 
 function getPriorityLabel(priority: TodoItem['priority']): string {
   return priority === 'high' ? '높음' : priority === 'medium' ? '보통' : '낮음';
+}
+
+function formatTodoMeta(todo: TodoItem): string {
+  const parts = [TODO_STATUS_LABELS[todo.status]];
+
+  if (todo.source === 'manual') {
+    parts.push(getPriorityLabel(todo.priority));
+  }
+
+  if (todo.category) {
+    parts.push(todo.category);
+  }
+
+  return parts.join(' · ');
 }
 
 function getTodayInputValue(date = new Date()): string {

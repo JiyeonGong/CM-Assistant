@@ -390,6 +390,10 @@ button:disabled {
   white-space: pre;
 }
 
+.report-output.compact-output {
+  min-height: 180px;
+}
+
 .empty-state {
   display: grid;
   min-height: 220px;
@@ -495,6 +499,91 @@ button:disabled {
   gap: 16px;
 }
 
+.quick-message-layout {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 20px;
+}
+
+.quick-message-category-list {
+  display: grid;
+  gap: 18px;
+}
+
+.quick-message-category {
+  display: grid;
+  gap: 10px;
+}
+
+.quick-message-category h3 {
+  margin: 0;
+  color: #1f365d;
+  font-size: 0.95rem;
+}
+
+.quick-message-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.quick-message-card {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #e1e7f0;
+  border-radius: 18px;
+  background: #fbfcfe;
+  color: #172033;
+  text-align: left;
+}
+
+.quick-message-card.active {
+  border-color: #4b73d9;
+  background: #f0f5ff;
+}
+
+.quick-message-card strong {
+  font-size: 1.05rem;
+}
+
+.quick-message-card small {
+  color: #6a7890;
+  line-height: 1.4;
+}
+
+.quick-message-status {
+  margin-top: 12px;
+}
+
+.quick-message-refresh {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.quick-message-save {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.spot-check-notice-sections {
+  display: grid;
+  gap: 16px;
+}
+
+.message-section {
+  padding: 14px;
+  border: 1px solid #e1e7f0;
+  border-radius: 18px;
+  background: #fbfcfe;
+}
+
+.message-section h3 {
+  margin: 0 0 10px;
+  color: #172033;
+  font-size: 1rem;
+}
+
 .todo-column {
   min-height: 320px;
 }
@@ -590,6 +679,7 @@ button:disabled {
   .controls-panel,
   .content-grid,
   .dashboard-grid,
+  .quick-message-layout,
   .quick-add-form,
   .todo-form,
   .todo-board,

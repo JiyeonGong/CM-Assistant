@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { join } from 'node:path';
 import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
-import { createTodo, deleteTodo, ensureTodayRoutineTodos, listTodos, listTodosByDate, updateTodo } from './services/appDataStore';
+import { createTodo, deleteTodo, ensureTodayRoutineTodos, getSavedQuickMessages, listTodos, listTodosByDate, saveQuickMessage, updateTodo } from './services/appDataStore';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -53,6 +53,8 @@ app.whenReady().then(() => {
   ipcMain.handle('todo:create', async (_event, input) => createTodo(input));
   ipcMain.handle('todo:update', async (_event, input) => updateTodo(input));
   ipcMain.handle('todo:delete', async (_event, id: string) => deleteTodo(id));
+  ipcMain.handle('quickMessages:get', async () => getSavedQuickMessages());
+  ipcMain.handle('quickMessages:save', async (_event, key, value: string) => saveQuickMessage(key, value));
 
   createWindow();
 });

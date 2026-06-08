@@ -2,24 +2,29 @@ import { app } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import type { SavedQuickMessages } from '../../src/types/appData';
 import type { CreateTodoInput, TodoItem, TodoPriority, TodoStatus, UpdateTodoInput } from '../../src/types/todo';
 
 interface AppData {
   todos: TodoItem[];
+  quickMessages: SavedQuickMessages;
 }
 
 const DEFAULT_DATA: AppData = {
-  todos: []
+  todos: [],
+  quickMessages: {}
 };
 
 const DAILY_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; category: string }> = [
-  { title: '오전 출결 확인', priority: 'high', category: '출결관리' },
-  { title: '오전 출결 보고 공유', priority: 'high', category: '보고' },
-  { title: '오후 출결 확인', priority: 'medium', category: '출결관리' },
-  { title: '오후 출결 보고 공유', priority: 'medium', category: '보고' },
-  { title: '최종 출결 확인', priority: 'high', category: '출결관리' },
-  { title: '최종 확정 출결 공유', priority: 'high', category: '보고' }
+  { title: '오전 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
+  { title: '오전 출결 현황 공유', priority: 'high', category: '보고' },
+  { title: '오후 출결 현황 공유', priority: 'medium', category: '보고' },
+  { title: '최종 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
+  { title: '최종 확정 현황 공유', priority: 'high', category: '보고' }
 ];
+
+const DAILY_ROUTINE_TODO_TITLES = new Set(DAILY_ROUTINE_TODOS.map((todo) => todo.title));
+const DAILY_ROUTINE_TODO_ORDER = new Map(DAILY_ROUTINE_TODOS.map((todo, index) => [todo.title, index]));
 
 function getDataFilePath(): string {
   return join(app.getPath('userData'), 'cm-assistant-data.json');
@@ -44,6 +49,23 @@ export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
   const today = getTodayString();
   const now = new Date().toISOString();
   let hasChanges = false;
+  const seenTodayRoutineTitles = new Set<string>();
+
+  const cleanedTodos = data.todos.filter((todo) => {
+    if (todo.source !== 'routine' || todo.dueDate !== today) {
+      return true;
+    }
+
+    if (!DAILY_ROUTINE_TODO_TITLES.has(todo.title) || seenTodayRoutineTitles.has(todo.title)) {
+      hasChanges = true;
+      return false;
+    }
+
+    seenTodayRoutineTitles.add(todo.title);
+    return true;
+  });
+
+  data.todos = cleanedTodos;
 
   for (const routine of DAILY_ROUTINE_TODOS) {
     const exists = data.todos.some((todo) => todo.source === 'routine' && todo.dueDate === today && todo.title === routine.title);
@@ -134,6 +156,25 @@ export async function deleteTodo(id: string): Promise<void> {
   await writeData(data);
 }
 
+export async function getSavedQuickMessages(): Promise<SavedQuickMessages> {
+  const data = await readData();
+  return data.quickMessages;
+}
+
+export async function saveQuickMessage(key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> {
+  if (key !== 'morningGreeting' && key !== 'eveningGreeting' && key !== 'instructorAttendanceShare') {
+    throw new Error('저장할 수 없는 멘트 종류입니다.');
+  }
+
+  const data = await readData();
+  data.quickMessages = {
+    ...data.quickMessages,
+    [key]: value
+  };
+  await writeData(data);
+  return data.quickMessages;
+}
+
 async function readData(): Promise<AppData> {
   const filePath = getDataFilePath();
 
@@ -141,7 +182,8 @@ async function readData(): Promise<AppData> {
     const raw = await readFile(filePath, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<AppData>;
     return {
-      todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : []
+      todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : [],
+      quickMessages: parsed.quickMessages ?? {}
     };
   } catch (error) {
     if (isFileMissingError(error)) {
@@ -192,11 +234,22 @@ function sortTodos(todos: TodoItem[]): TodoItem[] {
     const dueDateDiff = (a.dueDate ?? '9999-12-31').localeCompare(b.dueDate ?? '9999-12-31');
     if (dueDateDiff !== 0) return dueDateDiff;
 
+    const routineOrderDiff = getRoutineOrder(a) - getRoutineOrder(b);
+    if (routineOrderDiff !== 0) return routineOrderDiff;
+
     const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (priorityDiff !== 0) return priorityDiff;
 
     return a.createdAt.localeCompare(b.createdAt);
   });
+}
+
+function getRoutineOrder(todo: TodoItem): number {
+  if (todo.source !== 'routine') {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  return DAILY_ROUTINE_TODO_ORDER.get(todo.title) ?? Number.MAX_SAFE_INTEGER;
 }
 
 function normalizeTodo(todo: TodoItem): TodoItem {

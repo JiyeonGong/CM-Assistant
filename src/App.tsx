@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import AttendancePage from './pages/AttendancePage';
 import DashboardPage from './pages/DashboardPage';
+import QuickMessagesPage from './pages/QuickMessagesPage';
 import TodoPage from './pages/TodoPage';
 import { getTodayString } from './lib/todo';
 import type { CreateTodoInput, TodoItem, UpdateTodoInput } from './types/todo';
 
-type AppPage = 'dashboard' | 'attendance' | 'todo';
+type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo';
 
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'attendance', label: 'Attendance' },
+  { id: 'quickMessages', label: 'Messages' },
   { id: 'todo', label: 'Todo' }
 ];
 
@@ -99,6 +101,7 @@ export default function App() {
         />
       )}
       {activePage === 'attendance' && <AttendancePage />}
+      {activePage === 'quickMessages' && <QuickMessagesPage />}
       {activePage === 'todo' && <TodoPage todos={todos} onCreateTodo={handleCreateTodo} onUpdateTodo={handleUpdateTodo} onDeleteTodo={handleDeleteTodo} />}
     </main>
   );

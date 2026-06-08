@@ -1,5 +1,6 @@
 import { clipboard, contextBridge, ipcRenderer } from 'electron';
 import type { AttendanceSummary } from '../src/types/attendance';
+import type { SavedQuickMessages } from '../src/types/appData';
 import type { CreateTodoInput, TodoItem, UpdateTodoInput } from '../src/types/todo';
 
 const api = {
@@ -14,6 +15,10 @@ const api = {
   createTodo: (input: CreateTodoInput): Promise<TodoItem> => ipcRenderer.invoke('todo:create', input),
   updateTodo: (input: UpdateTodoInput): Promise<TodoItem> => ipcRenderer.invoke('todo:update', input),
   deleteTodo: (id: string): Promise<void> => ipcRenderer.invoke('todo:delete', id),
+  getSavedQuickMessages: (): Promise<SavedQuickMessages> => ipcRenderer.invoke('quickMessages:get'),
+  saveQuickMessage: (key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> =>
+    ipcRenderer.invoke('quickMessages:save', key, value),
+  copyText: (text: string): void => clipboard.writeText(text),
   copyReport: (text: string, html: string): void => clipboard.write({ text, html })
 };
 
