@@ -1,0 +1,43 @@
+{
+  "name": "cm-assistant",
+  "version": "0.1.0",
+  "description": "Local desktop assistant for attendance reporting",
+  "main": "out/main/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "tsc --noEmit && electron-vite build",
+    "preview": "electron-vite preview",
+    "dist:win": "npm run build && electron-builder --win"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  },
+  "build": {
+    "appId": "com.cm-assistant.app",
+    "productName": "CM Assistant",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
