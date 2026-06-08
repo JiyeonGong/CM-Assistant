@@ -5,4 +5,4 @@ release/
 npm-debug.log*
 .env
 .env.*
-docs/sample/
+docs/
