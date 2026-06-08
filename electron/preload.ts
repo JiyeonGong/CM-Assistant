@@ -6,6 +6,8 @@ const api = {
   selectExcelFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectExcelFile'),
   analyzeAttendance: (filePath: string, cohortName: string): Promise<AttendanceSummary> =>
     ipcRenderer.invoke('attendance:analyze', filePath, cohortName),
+  analyzePastedAttendance: (pastedText: string, cohortName: string): Promise<AttendanceSummary> =>
+    ipcRenderer.invoke('attendance:analyzePastedTable', pastedText, cohortName),
   listTodos: (): Promise<TodoItem[]> => ipcRenderer.invoke('todo:list'),
   ensureTodayRoutineTodos: (): Promise<TodoItem[]> => ipcRenderer.invoke('todo:ensureTodayRoutines'),
   listTodosByDate: (date: string): Promise<TodoItem[]> => ipcRenderer.invoke('todo:listByDate', date),

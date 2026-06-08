@@ -8,6 +8,7 @@ import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
 import type { AttendanceSummary } from '../types/attendance';
 
 type MessageType = 'info' | 'error' | 'success';
+type AttendanceInputMode = 'file' | 'paste';
 
 interface UiMessage {
   type: MessageType;
@@ -18,7 +19,9 @@ const DEFAULT_COHORT_NAME = 'PD_8기';
 
 export default function AttendancePage() {
   const [cohortName, setCohortName] = useState(DEFAULT_COHORT_NAME);
+  const [inputMode, setInputMode] = useState<AttendanceInputMode>('file');
   const [filePath, setFilePath] = useState('');
+  const [pastedTableText, setPastedTableText] = useState('');
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [generatedReport, setGeneratedReport] = useState('');
   const [message, setMessage] = useState<UiMessage | null>(null);
@@ -35,8 +38,13 @@ export default function AttendancePage() {
   }
 
   async function handleAnalyze(): Promise<void> {
-    if (!filePath) {
+    if (inputMode === 'file' && !filePath) {
       setMessage({ type: 'error', text: '먼저 단위기간 출석부 엑셀 파일을 선택해주세요.' });
+      return;
+    }
+
+    if (inputMode === 'paste' && !pastedTableText.trim()) {
+      setMessage({ type: 'error', text: '먼저 엑셀 표를 붙여넣어 주세요.' });
       return;
     }
 
@@ -44,10 +52,14 @@ export default function AttendancePage() {
     setMessage(null);
 
     try {
-      const result = await window.cmAssistant.analyzeAttendance(filePath, cohortName.trim() || DEFAULT_COHORT_NAME);
+      const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+      const result =
+        inputMode === 'file'
+          ? await window.cmAssistant.analyzeAttendance(filePath, trimmedCohortName)
+          : await window.cmAssistant.analyzePastedAttendance(pastedTableText, trimmedCohortName);
       setSummary(result);
-      setGeneratedReport('');
-      setMessage({ type: 'success', text: '출결 분석이 완료되었습니다.' });
+      setGeneratedReport(generateMorningAttendanceReport(result));
+      setMessage({ type: 'success', text: '출결 분석이 완료되어 오전 보고 멘트를 자동 생성했습니다.' });
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.' });
     } finally {
@@ -110,13 +122,27 @@ export default function AttendancePage() {
         <label className="field-label" htmlFor="cohortName">기수명</label>
         <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
 
-        <div className="file-row">
-          <button type="button" className="primary-button" onClick={handleSelectFile}>엑셀 파일 불러오기</button>
-          <div className="file-info">
-            <span>선택된 파일</span>
-            <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
-          </div>
+        <div className="input-mode-row">
+          <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
+          <button type="button" className={inputMode === 'paste' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('paste')}>표 붙여넣기</button>
         </div>
+
+        {inputMode === 'file' ? (
+          <div className="file-row">
+            <button type="button" className="primary-button" onClick={handleSelectFile}>엑셀 파일 불러오기</button>
+            <div className="file-info">
+              <span>선택된 파일</span>
+              <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
+            </div>
+          </div>
+        ) : (
+          <textarea
+            className="paste-input"
+            value={pastedTableText}
+            onChange={(event) => setPastedTableText(event.target.value)}
+            placeholder="엑셀에서 단위기간 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
+          />
+        )}
 
         <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '출결 분석하기'}</button>
         {message && <p className={`status-message ${message.type}`}>{message.text}</p>}
@@ -185,7 +211,6 @@ function SummaryCard({ summary }: { summary: AttendanceSummary }) {
         <DetailLine label="휴공가" people={summary.officialLeavePeople} />
         <DetailLine label="결석" people={summary.absentPeople} />
       </div>
-      <p className="review-result">출석입력요청: {summary.reviewRequestCount}건 / {summary.reviewResultText}</p>
     </div>
   );
 }

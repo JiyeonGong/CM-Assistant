@@ -182,6 +182,42 @@ button:disabled {
   align-items: center;
 }
 
+.input-mode-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: #f4f7fb;
+}
+
+.mode-button {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: transparent;
+  color: #516070;
+  font-weight: 900;
+}
+
+.mode-button.active {
+  background: #1f365d;
+  color: #fff;
+}
+
+.paste-input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 160px;
+  padding: 14px;
+  border: 1px solid #d7deea;
+  border-radius: 16px;
+  resize: vertical;
+  background: #f8fafc;
+  color: #152033;
+  line-height: 1.45;
+}
+
 .file-info {
   display: flex;
   min-width: 0;
