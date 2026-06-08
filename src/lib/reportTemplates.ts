@@ -41,7 +41,8 @@ export function generateFinalAttendanceReport(summary: AttendanceSummary): strin
     `- *지각/외출/조퇴:* ${exceptionCount}명`,
     formatNestedPeopleLines(exceptionPeople),
     '',
-    `- *결석:* ${summary.absentCount}명${formatPeopleInline(summary.absentPeople)}`,
+    `- *결석:* ${summary.absentCount}명`,
+    formatNestedPeopleLines(summary.absentPeople),
     '',
     '- *출석입력요청 검토 결과*',
     `  - *검토 대상:* ${summary.reviewRequestCount}건`,
@@ -97,8 +98,8 @@ function formatPeopleLines(people: Array<PersonNote | PersonTimeNote>): string {
   return people
     .map((person) => {
       const time = 'time' in person && person.time ? ` ${person.time}` : '';
-      const note = person.note ? person.note : getPersonStatus(person);
-      return `${person.name}(${note}${time})`;
+      const detail = [person.note, time.trim()].filter(Boolean).join(' ');
+      return detail ? `${person.name}(${detail})` : person.name;
     })
     .join('\n');
 }
@@ -113,12 +114,4 @@ function formatNestedPeopleLines(people: Array<PersonNote | PersonTimeNote>): st
     .split('\n')
     .map((line) => `  - ${line}`)
     .join('\n');
-}
-
-function getPersonStatus(person: PersonNote | PersonTimeNote): string {
-  if ('time' in person && person.time) {
-    return '';
-  }
-
-  return '부재중';
 }

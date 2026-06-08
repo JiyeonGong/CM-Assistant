@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { join } from 'node:path';
-import { analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
+import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
 import { createTodo, deleteTodo, ensureTodayRoutineTodos, listTodos, listTodosByDate, updateTodo } from './services/appDataStore';
 
 function createWindow(): void {
@@ -41,6 +41,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('attendance:analyze', async (_event, filePath: string, cohortName: string) => {
     return analyzeAttendanceWorkbook(filePath, cohortName);
+  });
+
+  ipcMain.handle('attendance:analyzePastedTable', async (_event, pastedText: string, cohortName: string) => {
+    return analyzeAttendancePastedTable(pastedText, cohortName);
   });
 
   ipcMain.handle('todo:list', async () => listTodos());

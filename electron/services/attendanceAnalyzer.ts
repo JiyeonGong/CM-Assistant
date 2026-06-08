@@ -4,6 +4,37 @@ import type { AttendanceSummary, PersonNote, PersonTimeNote } from '../../src/ty
 
 const ACTIVE_TRAINEE_STATUS = '훈련중';
 const PRESENT_STATUSES = new Set(['출석', '지각', '외출', '조퇴']);
+const QR_REQUIRED_STATUSES = new Set(['출석', '지각', '외출']);
+const LATE_START_TIME = '09:10';
+const EARLY_LEAVE_CUTOFF_TIME = '18:50';
+
+type AttendanceRowReader = (rowIndex: number, cellIndex: number) => unknown;
+
+interface AttendanceColumnMap {
+  name: number;
+  traineeStatus: number;
+  attendanceStatus: number;
+  entryTime: number;
+  exitTime: number;
+  outingStart: number;
+  outingEnd: number;
+  requestStatus: number;
+  requestAttendanceStatus: number;
+  requestReason: number;
+}
+
+const DEFAULT_COLUMNS: AttendanceColumnMap = {
+  name: 2,
+  traineeStatus: 6,
+  attendanceStatus: 7,
+  entryTime: 8,
+  exitTime: 9,
+  outingStart: 10,
+  outingEnd: 11,
+  requestStatus: 12,
+  requestAttendanceStatus: 13,
+  requestReason: 14
+};
 
 export async function analyzeAttendanceWorkbook(filePath: string, cohortName: string): Promise<AttendanceSummary> {
   if (!filePath.toLowerCase().endsWith('.xlsx')) {
@@ -20,61 +51,112 @@ export async function analyzeAttendanceWorkbook(filePath: string, cohortName: st
 
   validateDailyAttendanceSheet(worksheet);
 
+  return analyzeAttendanceRows({
+    cohortName,
+    sourceFileName: basename(filePath),
+    rowCount: worksheet.rowCount,
+    startRow: 3,
+    columns: DEFAULT_COLUMNS,
+    getCellValue: (rowIndex, cellIndex) => worksheet.getRow(rowIndex).getCell(cellIndex).value
+  });
+}
+
+export function analyzeAttendancePastedTable(pastedText: string, cohortName: string): AttendanceSummary {
+  const rows = parsePastedTable(pastedText);
+  const layout = getPastedAttendanceLayout(rows);
+
+  return analyzeAttendanceRows({
+    cohortName,
+    sourceFileName: '붙여넣은 출석부',
+    rowCount: rows.length,
+    startRow: layout.startRow,
+    columns: layout.columns,
+    getCellValue: (rowIndex, cellIndex) => rows[rowIndex - 1]?.[cellIndex - 1]
+  });
+}
+
+function analyzeAttendanceRows({
+  cohortName,
+  sourceFileName,
+  rowCount,
+  startRow,
+  columns,
+  getCellValue
+}: {
+  cohortName: string;
+  sourceFileName: string;
+  rowCount: number;
+  startRow: number;
+  columns: AttendanceColumnMap;
+  getCellValue: AttendanceRowReader;
+}): AttendanceSummary {
+
   const absentPeople: PersonNote[] = [];
   const latePeople: PersonTimeNote[] = [];
   const outingPeople: PersonTimeNote[] = [];
   const earlyLeavePeople: PersonTimeNote[] = [];
   const officialLeavePeople: PersonNote[] = [];
   const missingEntryPeople: PersonNote[] = [];
+  const qrMissingPeople: PersonNote[] = [];
 
   let totalCount = 0;
   let presentCount = 0;
   let reviewRequestCount = 0;
   const reviewNotes: string[] = [];
 
-  worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber <= 2) {
-      return;
-    }
-
-    const name = normalizeText(row.getCell(2).value);
-    const traineeStatus = normalizeText(row.getCell(6).value);
-    const attendanceStatus = normalizeText(row.getCell(7).value);
-    const entryTime = formatExcelTime(row.getCell(8).value);
+  for (let rowNumber = startRow; rowNumber <= rowCount; rowNumber += 1) {
+    const name = normalizeText(getCellValue(rowNumber, columns.name));
+    const traineeStatus = normalizeText(getCellValue(rowNumber, columns.traineeStatus));
+    const attendanceStatus = normalizeText(getCellValue(rowNumber, columns.attendanceStatus));
+    const entryTime = formatExcelTime(getCellValue(rowNumber, columns.entryTime));
+    const exitTime = formatExcelTime(getCellValue(rowNumber, columns.exitTime));
+    const isUnderHalfAttendance = isUnderHalfStatus(attendanceStatus);
+    const isAbsent = attendanceStatus === '결석' || isUnderHalfAttendance;
+    const isOfficialLeave = isOfficialLeaveStatus(attendanceStatus);
 
     if (!name || traineeStatus !== ACTIVE_TRAINEE_STATUS) {
-      return;
+      continue;
     }
 
     totalCount += 1;
 
-    if (PRESENT_STATUSES.has(attendanceStatus)) {
+    if (PRESENT_STATUSES.has(attendanceStatus) && !isUnderHalfAttendance) {
       presentCount += 1;
     }
 
-    if (!entryTime && !isOfficialLeaveStatus(attendanceStatus)) {
+    if (!entryTime && !isOfficialLeave && !isUnderHalfAttendance) {
       missingEntryPeople.push({ name, note: '부재중' });
     }
 
-    if (attendanceStatus === '결석') {
-      absentPeople.push({ name });
-    } else if (attendanceStatus === '지각') {
+    if (QR_REQUIRED_STATUSES.has(attendanceStatus) && !isUnderHalfAttendance && !exitTime) {
+      qrMissingPeople.push({ name });
+    }
+
+    if (isAbsent) {
+      absentPeople.push({ name, note: isUnderHalfAttendance ? '100분의50미만' : undefined });
+    } else if (attendanceStatus === '지각' || isAtOrAfterTime(entryTime, LATE_START_TIME)) {
       latePeople.push({ name, time: entryTime, note: '지각' });
-    } else if (attendanceStatus === '외출') {
+    }
+
+    if (!isAbsent && attendanceStatus === '외출') {
       outingPeople.push({
         name,
-        time: formatTimeRange(row.getCell(10).value, row.getCell(11).value),
+        time: formatTimeRange(getCellValue(rowNumber, columns.outingStart), getCellValue(rowNumber, columns.outingEnd)),
         note: '외출'
       });
-    } else if (attendanceStatus === '조퇴') {
-      earlyLeavePeople.push({ name, time: formatExcelTime(row.getCell(9).value), note: '조퇴' });
-    } else if (isOfficialLeaveStatus(attendanceStatus)) {
+    }
+
+    if (!isAbsent && (attendanceStatus === '조퇴' || isBeforeTime(exitTime, EARLY_LEAVE_CUTOFF_TIME))) {
+      earlyLeavePeople.push({ name, time: exitTime, note: '조퇴' });
+    }
+
+    if (isOfficialLeave) {
       officialLeavePeople.push({ name });
     }
 
-    const requestStatus = normalizeText(row.getCell(12).value);
-    const requestAttendanceStatus = normalizeText(row.getCell(13).value);
-    const requestReason = normalizeText(row.getCell(14).value);
+    const requestStatus = normalizeText(getCellValue(rowNumber, columns.requestStatus));
+    const requestAttendanceStatus = normalizeText(getCellValue(rowNumber, columns.requestAttendanceStatus));
+    const requestReason = normalizeText(getCellValue(rowNumber, columns.requestReason));
 
     if (requestStatus && requestStatus !== '-') {
       reviewRequestCount += 1;
@@ -82,7 +164,7 @@ export async function analyzeAttendanceWorkbook(filePath: string, cohortName: st
         [name, requestStatus, requestAttendanceStatus, requestReason].filter((value) => value && value !== '-').join(' ')
       );
     }
-  });
+  }
 
   if (totalCount === 0) {
     throw new Error('훈련중 상태의 수강생 데이터를 찾지 못했습니다. 단위기간 출석부 파일인지 확인해주세요.');
@@ -104,9 +186,9 @@ export async function analyzeAttendanceWorkbook(filePath: string, cohortName: st
     earlyLeaveCount: earlyLeavePeople.length,
     officialLeaveCount,
     missingEntryCount: missingEntryPeople.length,
-    qrMissingCount: 0,
+    qrMissingCount: qrMissingPeople.length,
     attendanceRate,
-    qrMissingPeople: [],
+    qrMissingPeople,
     outingPeople,
     latePeople,
     earlyLeavePeople,
@@ -115,7 +197,7 @@ export async function analyzeAttendanceWorkbook(filePath: string, cohortName: st
     absentPeople,
     reviewRequestCount,
     reviewResultText: reviewNotes.length > 0 ? reviewNotes.join(' / ') : '이상 없음',
-    sourceFileName: basename(filePath)
+    sourceFileName
   };
 }
 
@@ -132,7 +214,102 @@ function validateDailyAttendanceSheet(worksheet: ExcelJS.Worksheet): void {
   }
 }
 
-function normalizeText(value: ExcelJS.CellValue): string {
+function getPastedAttendanceLayout(rows: string[][]): { startRow: number; columns: AttendanceColumnMap } {
+  if (rows.length < 3) {
+    throw new Error('붙여넣은 표에서 출석부 데이터를 찾지 못했습니다. 헤더를 포함해 표 전체를 복사해주세요.');
+  }
+
+  const headerRowIndex = rows.findIndex((row) => {
+    const normalizedCells = row.map(normalizeText);
+    return normalizedCells.some((cell) => cell.includes('성명')) && normalizedCells.some((cell) => cell.includes('출결상태'));
+  });
+
+  if (headerRowIndex === -1) {
+    throw new Error('붙여넣은 표에서 성명/출결상태 헤더를 찾지 못했습니다. 단위기간 출석부 전체를 복사했는지 확인해주세요.');
+  }
+
+  const headerRow = rows[headerRowIndex].map(normalizeText);
+  const nameColumn = headerRow.findIndex((cell) => cell.includes('성명')) + 1;
+
+  if (nameColumn <= 0) {
+    throw new Error('붙여넣은 표에서 성명 열을 찾지 못했습니다.');
+  }
+
+  const columns: AttendanceColumnMap = {
+    name: nameColumn,
+    traineeStatus: nameColumn + 4,
+    attendanceStatus: nameColumn + 5,
+    entryTime: nameColumn + 6,
+    exitTime: nameColumn + 7,
+    outingStart: nameColumn + 8,
+    outingEnd: nameColumn + 9,
+    requestStatus: nameColumn + 10,
+    requestAttendanceStatus: nameColumn + 11,
+    requestReason: nameColumn + 12
+  };
+
+  const startRowIndex = rows.findIndex((row, index) => {
+    if (index <= headerRowIndex) return false;
+    const name = normalizeText(row[columns.name - 1]);
+    const traineeStatus = normalizeText(row[columns.traineeStatus - 1]);
+    return Boolean(name) && (traineeStatus === ACTIVE_TRAINEE_STATUS || traineeStatus === '중도탈락');
+  });
+
+  return {
+    startRow: startRowIndex === -1 ? headerRowIndex + 3 : startRowIndex + 1,
+    columns
+  };
+}
+
+function parsePastedTable(pastedText: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let isQuoted = false;
+  const text = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (char === '"') {
+      if (isQuoted && nextChar === '"') {
+        cell += '"';
+        index += 1;
+      } else {
+        isQuoted = !isQuoted;
+      }
+      continue;
+    }
+
+    if (char === '\t' && !isQuoted) {
+      row.push(cell.trim());
+      cell = '';
+      continue;
+    }
+
+    if (char === '\n' && !isQuoted) {
+      row.push(cell.trim());
+      if (row.some(Boolean)) {
+        rows.push(row);
+      }
+      row = [];
+      cell = '';
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell.trim());
+  if (row.some(Boolean)) {
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function normalizeText(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
   }
@@ -160,7 +337,11 @@ function isOfficialLeaveStatus(status: string): boolean {
   return status.includes('휴가') || status.includes('공가') || status.includes('휴공가');
 }
 
-function formatTimeRange(startValue: ExcelJS.CellValue, endValue: ExcelJS.CellValue): string | undefined {
+function isUnderHalfStatus(status: string): boolean {
+  return status.includes('100분의50미만') || status.includes('100분의 50미만') || status.includes('50미만');
+}
+
+function formatTimeRange(startValue: unknown, endValue: unknown): string | undefined {
   const start = formatExcelTime(startValue);
   const end = formatExcelTime(endValue);
 
@@ -171,7 +352,7 @@ function formatTimeRange(startValue: ExcelJS.CellValue, endValue: ExcelJS.CellVa
   return start || end;
 }
 
-function formatExcelTime(value: ExcelJS.CellValue): string | undefined {
+function formatExcelTime(value: unknown): string | undefined {
   const normalized = normalizeText(value);
   if (!normalized || normalized === '-') {
     return undefined;
@@ -191,6 +372,31 @@ function formatExcelTime(value: ExcelJS.CellValue): string | undefined {
   }
 
   return normalized;
+}
+
+function isAtOrAfterTime(time: string | undefined, threshold: string): boolean {
+  const timeMinutes = parseTimeToMinutes(time);
+  const thresholdMinutes = parseTimeToMinutes(threshold);
+  return timeMinutes !== undefined && thresholdMinutes !== undefined && timeMinutes >= thresholdMinutes;
+}
+
+function isBeforeTime(time: string | undefined, threshold: string): boolean {
+  const timeMinutes = parseTimeToMinutes(time);
+  const thresholdMinutes = parseTimeToMinutes(threshold);
+  return timeMinutes !== undefined && thresholdMinutes !== undefined && timeMinutes < thresholdMinutes;
+}
+
+function parseTimeToMinutes(time: string | undefined): number | undefined {
+  if (!time) {
+    return undefined;
+  }
+
+  const match = time.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) {
+    return undefined;
+  }
+
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function formatDate(date: Date): string {
