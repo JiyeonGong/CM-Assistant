@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import AttendancePage from './pages/AttendancePage';
 import DashboardPage from './pages/DashboardPage';
+import QuickMessagesPage from './pages/QuickMessagesPage';
 import TodoPage from './pages/TodoPage';
 import { getTodayString } from './lib/todo';
 import type { CreateTodoInput, TodoItem, UpdateTodoInput } from './types/todo';
 
-type AppPage = 'dashboard' | 'attendance' | 'todo';
+type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo';
 
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'attendance', label: 'Attendance' },
-  { id: 'todo', label: 'Todo' }
+  { id: 'dashboard', label: '오늘' },
+  { id: 'attendance', label: '출결' },
+  { id: 'quickMessages', label: '업무' },
+  { id: 'todo', label: '관리' }
 ];
 
 export default function App() {
@@ -76,7 +78,7 @@ export default function App() {
       <nav className="app-nav">
         <div>
           <strong>CM Assistant</strong>
-          <span>Local workflow tool</span>
+          <span>Class manager workspace</span>
         </div>
         <div className="nav-button-group">
           {NAV_ITEMS.map((item) => (
@@ -99,6 +101,7 @@ export default function App() {
         />
       )}
       {activePage === 'attendance' && <AttendancePage />}
+      {activePage === 'quickMessages' && <QuickMessagesPage />}
       {activePage === 'todo' && <TodoPage todos={todos} onCreateTodo={handleCreateTodo} onUpdateTodo={handleUpdateTodo} onDeleteTodo={handleDeleteTodo} />}
     </main>
   );

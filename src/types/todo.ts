@@ -16,6 +16,18 @@ export interface TodoItem {
   completedAt?: string;
 }
 
+export interface RoutineTemplate {
+  id: string;
+  title: string;
+  priority: TodoPriority;
+  category?: string;
+  enabled: boolean;
+  order: number;
+  startsOn: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateTodoInput {
   title: string;
   description?: string;
@@ -23,6 +35,18 @@ export interface CreateTodoInput {
   category?: string;
   dueDate?: string;
   source?: TodoSource;
+}
+
+export interface CreateRoutineTemplateInput {
+  title: string;
+  priority?: TodoPriority;
+  category?: string;
+}
+
+export interface UpdateRoutineTemplateInput {
+  id: string;
+  title?: string;
+  enabled?: boolean;
 }
 
 export interface UpdateTodoInput {

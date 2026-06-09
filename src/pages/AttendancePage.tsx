@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   generateAfternoonAttendanceReport,
+  generateAfternoonAttendanceTemplate,
   generateFinalAttendanceReport,
-  generateMorningAttendanceReport
+  generateFinalAttendanceTemplate,
+  generateMorningAttendanceReport,
+  generateMorningAttendanceTemplate
 } from '../lib/reportTemplates';
 import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
 import type { AttendanceSummary } from '../types/attendance';
 
 type MessageType = 'info' | 'error' | 'success';
 type AttendanceInputMode = 'file' | 'paste';
+type ReportType = 'morning' | 'afternoon' | 'final';
 
 interface UiMessage {
   type: MessageType;
@@ -25,7 +29,18 @@ export default function AttendancePage() {
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [generatedReport, setGeneratedReport] = useState('');
   const [message, setMessage] = useState<UiMessage | null>(null);
+  const [toastMessage, setToastMessage] = useState<UiMessage | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setToastMessage(null), 2_400);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   async function handleSelectFile(): Promise<void> {
     setMessage(null);
@@ -59,6 +74,7 @@ export default function AttendancePage() {
           : await window.cmAssistant.analyzePastedAttendance(pastedTableText, trimmedCohortName);
       setSummary(result);
       setGeneratedReport(generateMorningAttendanceReport(result));
+      setSelectedReportType('morning');
       setMessage({ type: 'success', text: '출결 분석이 완료되어 오전 보고 멘트를 자동 생성했습니다.' });
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.' });
@@ -68,33 +84,24 @@ export default function AttendancePage() {
   }
 
   function handleGenerateMorningReport(): void {
-    if (!summary) {
-      setMessage({ type: 'error', text: '먼저 출결 분석을 실행해주세요.' });
-      return;
-    }
-
-    setGeneratedReport(generateMorningAttendanceReport({ ...summary, cohortName }));
-    setMessage({ type: 'info', text: '오전 출결 보고 멘트를 생성했습니다.' });
+    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+    setGeneratedReport(summary ? generateMorningAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateMorningAttendanceTemplate(trimmedCohortName));
+    setSelectedReportType('morning');
+    setMessage({ type: 'info', text: summary ? '오전 출결 보고 멘트를 생성했습니다.' : '오전 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateAfternoonReport(): void {
-    if (!summary) {
-      setMessage({ type: 'error', text: '먼저 출결 분석을 실행해주세요.' });
-      return;
-    }
-
-    setGeneratedReport(generateAfternoonAttendanceReport({ ...summary, cohortName }));
-    setMessage({ type: 'info', text: '오후 출결 보고 멘트를 생성했습니다.' });
+    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+    setGeneratedReport(summary ? generateAfternoonAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateAfternoonAttendanceTemplate(trimmedCohortName));
+    setSelectedReportType('afternoon');
+    setMessage({ type: 'info', text: summary ? '오후 출결 보고 멘트를 생성했습니다.' : '오후 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateFinalReport(): void {
-    if (!summary) {
-      setMessage({ type: 'error', text: '먼저 출결 분석을 실행해주세요.' });
-      return;
-    }
-
-    setGeneratedReport(generateFinalAttendanceReport({ ...summary, cohortName }));
-    setMessage({ type: 'info', text: '최종 확정 출결 보고 멘트를 생성했습니다.' });
+    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+    setGeneratedReport(summary ? generateFinalAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateFinalAttendanceTemplate(trimmedCohortName));
+    setSelectedReportType('final');
+    setMessage({ type: 'info', text: summary ? '최종 확정 출결 보고 멘트를 생성했습니다.' : '최종 확정 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleCopy(): void {
@@ -104,68 +111,82 @@ export default function AttendancePage() {
     }
 
     window.cmAssistant.copyReport(generatedReport, convertSlackMarkdownToClipboardHtml(generatedReport));
-    setMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 볼드 서식이 함께 적용됩니다.' });
+    setToastMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 마크다운이 함께 적용됩니다.' });
   }
 
   return (
     <>
-      <section className="hero-card compact-hero">
+      {toastMessage && (
+        <div className={`quick-message-toast ${toastMessage.type}`} role="status" aria-live="polite">
+          {toastMessage.text}
+        </div>
+      )}
+      <section className="hero-card compact-hero simple-hero">
         <div>
           <p className="eyebrow">Attendance</p>
-          <h1>출결 보고</h1>
-          <p className="hero-copy">단위기간 출석부를 분석해 오전, 오후, 최종 Slack 보고 멘트를 생성합니다.</p>
+          <h1>출결을 확인하고 바로 공유해요</h1>
+          <p className="hero-copy">출석부 입력, 분석 결과 확인, 보고 멘트 복사까지 한 흐름으로 처리합니다.</p>
         </div>
-        <div className="privacy-badge">개인정보 서버 전송 없음</div>
       </section>
 
-      <section className="panel controls-panel">
-        <label className="field-label" htmlFor="cohortName">기수명</label>
-        <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
-
-        <div className="input-mode-row">
-          <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
-          <button type="button" className={inputMode === 'paste' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('paste')}>표 붙여넣기</button>
+      <section className="panel input-panel">
+        <div className="section-heading step-heading">
+          <p className="eyebrow">Step 1</p>
+          <h2>출석부 넣기</h2>
+          <p>엑셀 파일을 불러오거나 표를 붙여넣은 뒤 분석합니다.</p>
         </div>
 
-        {inputMode === 'file' ? (
-          <div className="file-row">
-            <button type="button" className="primary-button" onClick={handleSelectFile}>엑셀 파일 불러오기</button>
-            <div className="file-info">
-              <span>선택된 파일</span>
-              <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
-            </div>
-          </div>
-        ) : (
-          <textarea
-            className="paste-input"
-            value={pastedTableText}
-            onChange={(event) => setPastedTableText(event.target.value)}
-            placeholder="엑셀에서 단위기간 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
-          />
-        )}
+        <div className="attendance-input-grid">
+          <label className="field-label" htmlFor="cohortName">기수명</label>
+          <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
 
-        <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '출결 분석하기'}</button>
-        {message && <p className={`status-message ${message.type}`}>{message.text}</p>}
+          <div className="input-mode-row">
+            <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
+            <button type="button" className={inputMode === 'paste' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('paste')}>표 붙여넣기</button>
+          </div>
+
+          {inputMode === 'file' ? (
+            <div className="file-row">
+              <button type="button" className="primary-button" onClick={handleSelectFile}>출석부 불러오기</button>
+              <div className="file-info">
+                <span>선택된 파일</span>
+                <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
+              </div>
+            </div>
+          ) : (
+            <textarea
+              className="paste-input"
+              value={pastedTableText}
+              onChange={(event) => setPastedTableText(event.target.value)}
+              placeholder="엑셀에서 단위기간 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
+            />
+          )}
+
+          <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '분석하기'}</button>
+          {message && <p className={`status-message ${message.type}`}>{message.text}</p>}
+        </div>
       </section>
 
       <section className="content-grid">
         <section className="panel">
           <div className="section-heading">
-            <p className="eyebrow">Summary</p>
-            <h2>분석 결과 요약</h2>
+            <p className="eyebrow">Step 2</p>
+            <h2>결과 확인</h2>
+            <p>보고 전에 이상 인원과 QR 미촬영자를 확인합니다.</p>
           </div>
           {summary ? <SummaryCard summary={summary} /> : <EmptyState text="출석부를 선택한 뒤 분석을 실행해주세요." />}
         </section>
 
         <section className="panel report-panel">
           <div className="section-heading">
-            <p className="eyebrow">Slack Text</p>
-            <h2>보고 멘트 생성</h2>
+            <p className="eyebrow">Step 3</p>
+            <h2>보고 복사</h2>
+            <p>출석부가 없어도 기본 양식을 만들고 바로 복사할 수 있습니다.</p>
           </div>
           <div className="button-row three-columns">
-            <button type="button" className="primary-button" onClick={handleGenerateMorningReport}>오전 보고</button>
-            <button type="button" className="secondary-button" onClick={handleGenerateAfternoonReport}>오후 보고</button>
-            <button type="button" className="secondary-button" onClick={handleGenerateFinalReport}>최종 보고</button>
+            <button type="button" className={getReportButtonClassName('morning', selectedReportType)} onClick={handleGenerateMorningReport}>오전 보고</button>
+            <button type="button" className={getReportButtonClassName('afternoon', selectedReportType)} onClick={handleGenerateAfternoonReport}>오후 보고</button>
+            <button type="button" className={getReportButtonClassName('final', selectedReportType)} onClick={handleGenerateFinalReport}>최종 보고</button>
           </div>
           <textarea className="report-output" value={generatedReport} readOnly placeholder="생성된 Slack 문구가 여기에 표시됩니다." />
           <button type="button" className="copy-button" onClick={handleCopy}>복사하기</button>
@@ -230,4 +251,8 @@ function EmptyState({ text }: { text: string }) {
 
 function getFileName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() || filePath;
+}
+
+function getReportButtonClassName(type: ReportType, selectedType: ReportType | null): string {
+  return selectedType === type ? 'primary-button report-type-button' : 'secondary-button report-type-button';
 }
