@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import {
   generateAfternoonAttendanceReport,
+  generateAfternoonAttendanceTemplate,
   generateFinalAttendanceReport,
-  generateMorningAttendanceReport
+  generateFinalAttendanceTemplate,
+  generateMorningAttendanceReport,
+  generateMorningAttendanceTemplate
 } from '../lib/reportTemplates';
 import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
 import type { AttendanceSummary } from '../types/attendance';
@@ -68,33 +71,21 @@ export default function AttendancePage() {
   }
 
   function handleGenerateMorningReport(): void {
-    if (!summary) {
-      setMessage({ type: 'error', text: '먼저 출결 분석을 실행해주세요.' });
-      return;
-    }
-
-    setGeneratedReport(generateMorningAttendanceReport({ ...summary, cohortName }));
-    setMessage({ type: 'info', text: '오전 출결 보고 멘트를 생성했습니다.' });
+    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+    setGeneratedReport(summary ? generateMorningAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateMorningAttendanceTemplate(trimmedCohortName));
+    setMessage({ type: 'info', text: summary ? '오전 출결 보고 멘트를 생성했습니다.' : '오전 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateAfternoonReport(): void {
-    if (!summary) {
-      setMessage({ type: 'error', text: '먼저 출결 분석을 실행해주세요.' });
-      return;
-    }
-
-    setGeneratedReport(generateAfternoonAttendanceReport({ ...summary, cohortName }));
-    setMessage({ type: 'info', text: '오후 출결 보고 멘트를 생성했습니다.' });
+    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+    setGeneratedReport(summary ? generateAfternoonAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateAfternoonAttendanceTemplate(trimmedCohortName));
+    setMessage({ type: 'info', text: summary ? '오후 출결 보고 멘트를 생성했습니다.' : '오후 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateFinalReport(): void {
-    if (!summary) {
-      setMessage({ type: 'error', text: '먼저 출결 분석을 실행해주세요.' });
-      return;
-    }
-
-    setGeneratedReport(generateFinalAttendanceReport({ ...summary, cohortName }));
-    setMessage({ type: 'info', text: '최종 확정 출결 보고 멘트를 생성했습니다.' });
+    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
+    setGeneratedReport(summary ? generateFinalAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateFinalAttendanceTemplate(trimmedCohortName));
+    setMessage({ type: 'info', text: summary ? '최종 확정 출결 보고 멘트를 생성했습니다.' : '최종 확정 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleCopy(): void {
@@ -118,41 +109,49 @@ export default function AttendancePage() {
         <div className="privacy-badge">개인정보 서버 전송 없음</div>
       </section>
 
-      <section className="panel controls-panel input-panel">
-        <label className="field-label" htmlFor="cohortName">기수명</label>
-        <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
-
-        <div className="input-mode-row">
-          <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
-          <button type="button" className={inputMode === 'paste' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('paste')}>표 붙여넣기</button>
+      <section className="panel input-panel">
+        <div className="section-heading step-heading">
+          <p className="eyebrow">Step 1</p>
+          <h2>출석부 넣기</h2>
+          <p>엑셀 파일을 불러오거나 표를 붙여넣은 뒤 분석합니다.</p>
         </div>
 
-        {inputMode === 'file' ? (
-          <div className="file-row">
-            <button type="button" className="primary-button" onClick={handleSelectFile}>출석부 불러오기</button>
-            <div className="file-info">
-              <span>선택된 파일</span>
-              <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
-            </div>
-          </div>
-        ) : (
-          <textarea
-            className="paste-input"
-            value={pastedTableText}
-            onChange={(event) => setPastedTableText(event.target.value)}
-            placeholder="엑셀에서 단위기간 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
-          />
-        )}
+        <div className="attendance-input-grid">
+          <label className="field-label" htmlFor="cohortName">기수명</label>
+          <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
 
-        <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '분석하기'}</button>
-        {message && <p className={`status-message ${message.type}`}>{message.text}</p>}
+          <div className="input-mode-row">
+            <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
+            <button type="button" className={inputMode === 'paste' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('paste')}>표 붙여넣기</button>
+          </div>
+
+          {inputMode === 'file' ? (
+            <div className="file-row">
+              <button type="button" className="primary-button" onClick={handleSelectFile}>출석부 불러오기</button>
+              <div className="file-info">
+                <span>선택된 파일</span>
+                <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
+              </div>
+            </div>
+          ) : (
+            <textarea
+              className="paste-input"
+              value={pastedTableText}
+              onChange={(event) => setPastedTableText(event.target.value)}
+              placeholder="엑셀에서 단위기간 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
+            />
+          )}
+
+          <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '분석하기'}</button>
+          {message && <p className={`status-message ${message.type}`}>{message.text}</p>}
+        </div>
       </section>
 
       <section className="content-grid">
         <section className="panel">
           <div className="section-heading">
-            <p className="eyebrow">Summary</p>
-            <h2>분석 결과</h2>
+            <p className="eyebrow">Step 2</p>
+            <h2>결과 확인</h2>
             <p>보고 전에 이상 인원과 QR 미촬영자를 확인합니다.</p>
           </div>
           {summary ? <SummaryCard summary={summary} /> : <EmptyState text="출석부를 선택한 뒤 분석을 실행해주세요." />}
@@ -160,9 +159,9 @@ export default function AttendancePage() {
 
         <section className="panel report-panel">
           <div className="section-heading">
-            <p className="eyebrow">Slack Text</p>
-            <h2>보고 멘트</h2>
-            <p>필요한 시간대의 문구를 만들고 바로 복사합니다.</p>
+            <p className="eyebrow">Step 3</p>
+            <h2>보고 복사</h2>
+            <p>출석부가 없어도 기본 양식을 만들고 바로 복사할 수 있습니다.</p>
           </div>
           <div className="button-row three-columns">
             <button type="button" className="primary-button" onClick={handleGenerateMorningReport}>오전 보고</button>

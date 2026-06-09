@@ -122,7 +122,7 @@ export default function QuickMessagesPage() {
       <section className="quick-message-layout">
         <div className="panel">
           <div className="section-heading">
-            <p className="eyebrow">Templates</p>
+            <p className="eyebrow">Step 1</p>
             <h2>멘트 선택</h2>
             <p>상황에 맞는 문구를 선택하세요.</p>
           </div>
@@ -138,6 +138,7 @@ export default function QuickMessagesPage() {
                       onClick={() => handleSelectTemplate(template)}
                       key={template.id}
                     >
+                      <span>{template.category}</span>
                       <strong>{template.title}</strong>
                       <small>{template.description}</small>
                     </button>
@@ -150,8 +151,8 @@ export default function QuickMessagesPage() {
 
         <div className="panel report-panel">
           <div className="section-heading">
-            <p className="eyebrow">Output</p>
-            <h2>{selectedTemplate ? selectedTemplate.title : '멘트를 선택해주세요'}</h2>
+            <p className="eyebrow">Step 2</p>
+            <h2>{selectedTemplate ? selectedTemplate.title : '확인하고 복사하기'}</h2>
             <p>{selectedTemplate ? '필요하면 내용을 살짝 수정한 뒤 복사하세요.' : '왼쪽에서 먼저 문구를 고르세요.'}</p>
           </div>
           {selectedTemplate?.generator && selectedTemplate.refreshable && (
@@ -168,9 +169,9 @@ export default function QuickMessagesPage() {
                   value={spotCheckDiscordMessage}
                   onChange={(event) => setSpotCheckDiscordMessage(event.target.value)}
                 />
-                <button type="button" className="copy-button" onClick={() => handleCopyText(spotCheckDiscordMessage, '디스코드 DM')}>
-                  디스코드 DM 복사
-                </button>
+                <div className="message-action-row">
+                  <button type="button" className="copy-button" onClick={() => handleCopyText(spotCheckDiscordMessage, '디스코드 DM')}>디스코드 DM 복사</button>
+                </div>
               </div>
               <div className="message-section">
                 <h3>Zep 채팅</h3>
@@ -179,9 +180,9 @@ export default function QuickMessagesPage() {
                   value={spotCheckZepMessage}
                   onChange={(event) => setSpotCheckZepMessage(event.target.value)}
                 />
-                <button type="button" className="copy-button" onClick={() => handleCopyText(spotCheckZepMessage, 'Zep 채팅')}>
-                  Zep 채팅 복사
-                </button>
+                <div className="message-action-row">
+                  <button type="button" className="copy-button" onClick={() => handleCopyText(spotCheckZepMessage, 'Zep 채팅')}>Zep 채팅 복사</button>
+                </div>
               </div>
             </div>
           ) : (
@@ -192,12 +193,14 @@ export default function QuickMessagesPage() {
                 onChange={(event) => setGeneratedMessage(event.target.value)}
                 placeholder="왼쪽에서 자주 쓰는 멘트를 선택하면 여기에 표시됩니다."
               />
-              <button type="button" className="copy-button" onClick={handleCopy}>복사하기</button>
-              {selectedTemplate?.savedKey && (
-                <button type="button" className="secondary-button quick-message-save" onClick={handleSaveGreeting} disabled={isSavingGreeting}>
-                  {isSavingGreeting ? '저장 중...' : '내 멘트 저장'}
-                </button>
-              )}
+              <div className="message-action-row">
+                <button type="button" className="copy-button" onClick={handleCopy}>복사하기</button>
+                {selectedTemplate?.savedKey && (
+                  <button type="button" className="secondary-button" onClick={handleSaveGreeting} disabled={isSavingGreeting}>
+                    {isSavingGreeting ? '저장 중...' : '내 멘트 저장'}
+                  </button>
+                )}
+              </div>
             </>
           )}
           {copyMessage && <p className="status-message success quick-message-status">{copyMessage}</p>}

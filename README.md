@@ -63,6 +63,7 @@ npm run dist:win
 - 중도탈락 등 `훈련중`이 아닌 행은 전체 인원에서 제외
 - 출석입력요청은 처리상태가 `-`가 아닌 행을 검토 대상으로 집계
 - 분석 완료 시 오전 보고 멘트가 자동 생성됩니다.
+- 출석부 분석 전에도 오전/오후/최종 보고 버튼으로 수강생 정보가 없는 기본 보고 양식을 생성하고 복사할 수 있습니다.
 
 ## Todo / Dashboard
 
@@ -104,6 +105,8 @@ npm run dist:win
 - `Todo`는 Dashboard와 역할이 겹치지 않도록 전체 업무 관리/정리 화면으로 단순화합니다.
 - `Attendance`는 `출석부 입력 → 분석 결과 확인 → 보고 멘트 복사` 순서가 자연스럽게 보이도록 단계형 UX를 검토합니다.
 - `Messages`는 템플릿 보관함보다 바로 복사해서 쓰는 도구에 가깝게 정리합니다.
+- `Attendance`는 화면 전환 없이 `Step 1 출석부 넣기`, `Step 2 결과 확인`, `Step 3 보고 복사` 흐름으로 정리합니다.
+- `Messages`는 `Step 1 멘트 선택`, `Step 2 확인하고 복사하기` 흐름으로 정리합니다.
 - 기능별 참고 방향은 `Todoist + Process Street`(Dashboard/Todo), `Airtable + PowerSchool`(Attendance), `Text Blaze + Notion Templates`(Messages)입니다.
 
 ## 다음 작업

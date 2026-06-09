@@ -1,5 +1,46 @@
 import type { AttendanceSummary, PersonNote, PersonTimeNote } from '../types/attendance';
 
+export function generateMorningAttendanceTemplate(cohortName: string, date = new Date()): string {
+  const { dateText, dayOfWeek } = formatReportDate(date);
+
+  return [
+    `*[${cohortName}] ${dateText}(${dayOfWeek}) 오전 출결 현황 공유*`,
+    '- *출석:* 00명 (전체: 00명)',
+    '- *지각/미입실:* 00명',
+    '- *휴공가:* 00명',
+    '- *결석:* 00명'
+  ].join('\n');
+}
+
+export function generateAfternoonAttendanceTemplate(cohortName: string, date = new Date()): string {
+  const { dateText, dayOfWeek } = formatReportDate(date);
+
+  return [
+    `*[${cohortName}] ${dateText}일(${dayOfWeek}) 오후 출결 현황 공유*`,
+    '- *Zep 접속자:* 00명',
+    '- *외출:* 00명',
+    '- *추가 휴공가:* 00명',
+    '- *결석:* 00명'
+  ].join('\n');
+}
+
+export function generateFinalAttendanceTemplate(cohortName: string, date = new Date()): string {
+  const { dateText, dayOfWeek } = formatReportDate(date);
+
+  return [
+    `*[${cohortName}] ${dateText}(${dayOfWeek}) 최종 확정 출결 공유*`,
+    '- *출석:* 00명(전체 00명)',
+    '- *퇴실 QR 미촬영:* 00명',
+    '- *지각/외출/조퇴:* 00명',
+    '',
+    '- *결석:* 00명',
+    '',
+    '- *출석입력요청 검토 결과*',
+    '  - *검토 대상:* 00건',
+    '  - *검토 결과:* -'
+  ].join('\n');
+}
+
 export function generateMorningAttendanceReport(summary: AttendanceSummary): string {
   const lateOrMissingPeople = [...summary.missingEntryPeople, ...summary.latePeople];
   const missingEntryNames = new Set(summary.missingEntryPeople.map((person) => person.name));
@@ -114,4 +155,11 @@ function formatNestedPeopleLines(people: Array<PersonNote | PersonTimeNote>): st
     .split('\n')
     .map((line) => `  - ${line}`)
     .join('\n');
+}
+
+function formatReportDate(date: Date): { dateText: string; dayOfWeek: string } {
+  return {
+    dateText: `${date.getMonth() + 1}/${date.getDate()}`,
+    dayOfWeek: ['일', '월', '화', '수', '목', '금', '토'][date.getDay()]
+  };
 }
