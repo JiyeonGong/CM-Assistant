@@ -225,7 +225,7 @@ function getPastedAttendanceLayout(rows: string[][]): { startRow: number; column
   });
 
   if (headerRowIndex === -1) {
-    throw new Error('붙여넣은 표에서 성명/출결상태 헤더를 찾지 못했습니다. 단위기간 출석부 전체를 복사했는지 확인해주세요.');
+    throw new Error('붙여넣은 표에서 성명/출결상태 헤더를 찾지 못했습니다. 오늘 HRD 출석부 전체를 복사했는지 확인해주세요.');
   }
 
   const headerRow = rows[headerRowIndex].map(normalizeText);

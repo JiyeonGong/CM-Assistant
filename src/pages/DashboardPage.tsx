@@ -58,7 +58,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
 
       <section className="panel quick-add-panel quiet-panel">
         <form className="quick-add-form" onSubmit={handleQuickAdd}>
-          <input className="text-input line-input" value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="생각난 업무를 적어두세요" />
+          <input className="text-input line-input" value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="생각난 업무를 적어두세요 (Enter를 누르면 바로 추가)" />
           <button type="submit" className="accent-button">추가</button>
         </form>
       </section>

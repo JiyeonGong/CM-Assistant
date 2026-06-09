@@ -11,8 +11,8 @@ type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo';
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
   { id: 'dashboard', label: '오늘' },
   { id: 'attendance', label: '출결' },
-  { id: 'quickMessages', label: '멘트' },
-  { id: 'todo', label: '업무' }
+  { id: 'quickMessages', label: '업무' },
+  { id: 'todo', label: '관리' }
 ];
 
 export default function App() {

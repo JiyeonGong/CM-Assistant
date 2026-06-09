@@ -1,7 +1,20 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { join } from 'node:path';
 import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
-import { createTodo, deleteTodo, ensureTodayRoutineTodos, getSavedQuickMessages, listTodos, listTodosByDate, saveQuickMessage, updateTodo } from './services/appDataStore';
+import {
+  createRoutineTemplate,
+  createTodo,
+  deleteTodo,
+  ensureTodayRoutineTodos,
+  getSavedQuickMessages,
+  listRoutineTemplates,
+  listTodos,
+  listTodosByDate,
+  saveQuickMessage,
+  updateRoutineTemplate,
+  updateRoutineTemplateEnabled,
+  updateTodo
+} from './services/appDataStore';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -53,6 +66,10 @@ app.whenReady().then(() => {
   ipcMain.handle('todo:create', async (_event, input) => createTodo(input));
   ipcMain.handle('todo:update', async (_event, input) => updateTodo(input));
   ipcMain.handle('todo:delete', async (_event, id: string) => deleteTodo(id));
+  ipcMain.handle('routineTemplates:list', async () => listRoutineTemplates());
+  ipcMain.handle('routineTemplates:create', async (_event, input) => createRoutineTemplate(input));
+  ipcMain.handle('routineTemplates:update', async (_event, input) => updateRoutineTemplate(input));
+  ipcMain.handle('routineTemplates:updateEnabled', async (_event, id: string, enabled: boolean) => updateRoutineTemplateEnabled(id, enabled));
   ipcMain.handle('quickMessages:get', async () => getSavedQuickMessages());
   ipcMain.handle('quickMessages:save', async (_event, key, value: string) => saveQuickMessage(key, value));
 

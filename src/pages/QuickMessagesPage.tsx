@@ -113,9 +113,9 @@ export default function QuickMessagesPage() {
     <>
       <section className="hero-card compact-hero simple-hero">
         <div>
-          <p className="eyebrow">Quick Messages</p>
-          <h1>반복 문구를 빠르게 꺼내요</h1>
-          <p className="hero-copy">불시점검, 강사 공유, 인사처럼 자주 쓰는 문구를 고르고 바로 복사합니다.</p>
+          <p className="eyebrow">Work Tools</p>
+          <h1>반복 업무를 빠르게 처리해요</h1>
+          <p className="hero-copy">불시점검 처럼 매일 반복되는 운영 업무를 바로 처리합니다.</p>
         </div>
       </section>
 
@@ -123,8 +123,8 @@ export default function QuickMessagesPage() {
         <div className="panel">
           <div className="section-heading">
             <p className="eyebrow">Step 1</p>
-            <h2>멘트 선택</h2>
-            <p>상황에 맞는 문구를 선택하세요.</p>
+            <h2>업무 선택</h2>
+            <p>처리할 운영 업무를 선택하세요.</p>
           </div>
           <div className="quick-message-category-list">
             {MESSAGE_CATEGORIES.map((category) => (
@@ -153,7 +153,7 @@ export default function QuickMessagesPage() {
           <div className="section-heading">
             <p className="eyebrow">Step 2</p>
             <h2>{selectedTemplate ? selectedTemplate.title : '확인하고 복사하기'}</h2>
-            <p>{selectedTemplate ? '필요하면 내용을 살짝 수정한 뒤 복사하세요.' : '왼쪽에서 먼저 문구를 고르세요.'}</p>
+            <p>{selectedTemplate ? '필요하면 내용을 살짝 수정한 뒤 복사하세요.' : '왼쪽에서 먼저 업무를 고르세요.'}</p>
           </div>
           {selectedTemplate?.generator && selectedTemplate.refreshable && (
             <button type="button" className="accent-button quick-message-refresh" onClick={handleRefreshGeneratedMessage}>
@@ -191,7 +191,7 @@ export default function QuickMessagesPage() {
                 className="report-output"
                 value={generatedMessage}
                 onChange={(event) => setGeneratedMessage(event.target.value)}
-                placeholder="왼쪽에서 자주 쓰는 멘트를 선택하면 여기에 표시됩니다."
+                placeholder="왼쪽에서 업무를 선택하면 필요한 문구가 여기에 표시됩니다."
               />
               <div className="message-action-row">
                 <button type="button" className="copy-button" onClick={handleCopy}>복사하기</button>

@@ -3,19 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { SavedQuickMessages } from '../../src/types/appData';
-import type { CreateTodoInput, TodoItem, TodoPriority, TodoStatus, UpdateTodoInput } from '../../src/types/todo';
+import type { CreateRoutineTemplateInput, CreateTodoInput, RoutineTemplate, TodoItem, TodoPriority, TodoStatus, UpdateRoutineTemplateInput, UpdateTodoInput } from '../../src/types/todo';
 
-interface AppData {
-  todos: TodoItem[];
-  quickMessages: SavedQuickMessages;
-}
-
-const DEFAULT_DATA: AppData = {
-  todos: [],
-  quickMessages: {}
-};
-
-const DAILY_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; category: string }> = [
+const DEFAULT_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; category: string }> = [
   { title: '오전 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
   { title: '오전 출결 현황 공유', priority: 'high', category: '보고' },
   { title: '오후 출결 현황 공유', priority: 'medium', category: '보고' },
@@ -23,8 +13,20 @@ const DAILY_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; catego
   { title: '최종 확정 현황 공유', priority: 'high', category: '보고' }
 ];
 
-const DAILY_ROUTINE_TODO_TITLES = new Set(DAILY_ROUTINE_TODOS.map((todo) => todo.title));
-const DAILY_ROUTINE_TODO_ORDER = new Map(DAILY_ROUTINE_TODOS.map((todo, index) => [todo.title, index]));
+const DEFAULT_ROUTINE_TODO_TITLES = new Set(DEFAULT_ROUTINE_TODOS.map((todo) => todo.title));
+const LEGACY_ROUTINE_TODO_TITLES = new Set(['오전 출결 확인', '오전 출결 보고 공유', '오후 출결 확인', '오후 출결 보고 공유', '최종 출결 확인', '최종 확정 출결 공유']);
+
+interface AppData {
+  todos: TodoItem[];
+  quickMessages: SavedQuickMessages;
+  routineTemplates: RoutineTemplate[];
+}
+
+const DEFAULT_DATA: AppData = {
+  todos: [],
+  quickMessages: {},
+  routineTemplates: createDefaultRoutineTemplates()
+};
 
 function getDataFilePath(): string {
   return join(app.getPath('userData'), 'cm-assistant-data.json');
@@ -50,13 +52,14 @@ export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
   const now = new Date().toISOString();
   let hasChanges = false;
   const seenTodayRoutineTitles = new Set<string>();
+  const routineTemplates = sortRoutineTemplates(data.routineTemplates);
 
   const cleanedTodos = data.todos.filter((todo) => {
     if (todo.source !== 'routine' || todo.dueDate !== today) {
       return true;
     }
 
-    if (!DAILY_ROUTINE_TODO_TITLES.has(todo.title) || seenTodayRoutineTitles.has(todo.title)) {
+    if (LEGACY_ROUTINE_TODO_TITLES.has(todo.title) || seenTodayRoutineTitles.has(todo.title)) {
       hasChanges = true;
       return false;
     }
@@ -67,7 +70,11 @@ export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
 
   data.todos = cleanedTodos;
 
-  for (const routine of DAILY_ROUTINE_TODOS) {
+  for (const routine of routineTemplates) {
+    if (!routine.enabled || routine.startsOn > today) {
+      continue;
+    }
+
     const exists = data.todos.some((todo) => todo.source === 'routine' && todo.dueDate === today && todo.title === routine.title);
     if (exists) {
       continue;
@@ -156,6 +163,64 @@ export async function deleteTodo(id: string): Promise<void> {
   await writeData(data);
 }
 
+export async function listRoutineTemplates(): Promise<RoutineTemplate[]> {
+  const data = await readData();
+  return sortRoutineTemplates(data.routineTemplates);
+}
+
+export async function createRoutineTemplate(input: CreateRoutineTemplateInput): Promise<RoutineTemplate> {
+  const title = input.title.trim();
+  if (!title) {
+    throw new Error('루틴 제목을 입력해주세요.');
+  }
+
+  const data = await readData();
+  const now = new Date().toISOString();
+  const template: RoutineTemplate = {
+    id: randomUUID(),
+    title,
+    priority: input.priority ?? 'medium',
+    category: cleanOptional(input.category) ?? '내 루틴',
+    enabled: true,
+    order: getNextRoutineOrder(data.routineTemplates),
+    startsOn: getTomorrowString(),
+    createdAt: now,
+    updatedAt: now
+  };
+
+  data.routineTemplates.push(template);
+  await writeData(data);
+  return template;
+}
+
+export async function updateRoutineTemplateEnabled(id: string, enabled: boolean): Promise<RoutineTemplate> {
+  return updateRoutineTemplate({ id, enabled });
+}
+
+export async function updateRoutineTemplate(input: UpdateRoutineTemplateInput): Promise<RoutineTemplate> {
+  const data = await readData();
+  const index = data.routineTemplates.findIndex((template) => template.id === input.id);
+  if (index === -1) {
+    throw new Error('수정할 루틴을 찾지 못했습니다.');
+  }
+
+  const title = input.title !== undefined ? input.title.trim() : data.routineTemplates[index].title;
+  if (!title) {
+    throw new Error('루틴 제목을 입력해주세요.');
+  }
+
+  const updated: RoutineTemplate = {
+    ...data.routineTemplates[index],
+    title,
+    enabled: input.enabled ?? data.routineTemplates[index].enabled,
+    updatedAt: new Date().toISOString()
+  };
+
+  data.routineTemplates[index] = updated;
+  await writeData(data);
+  return updated;
+}
+
 export async function getSavedQuickMessages(): Promise<SavedQuickMessages> {
   const data = await readData();
   return data.quickMessages;
@@ -183,7 +248,8 @@ async function readData(): Promise<AppData> {
     const parsed = JSON.parse(raw) as Partial<AppData>;
     return {
       todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : [],
-      quickMessages: parsed.quickMessages ?? {}
+      quickMessages: parsed.quickMessages ?? {},
+      routineTemplates: normalizeRoutineTemplates(parsed.routineTemplates)
     };
   } catch (error) {
     if (isFileMissingError(error)) {
@@ -249,7 +315,55 @@ function getRoutineOrder(todo: TodoItem): number {
     return Number.MAX_SAFE_INTEGER;
   }
 
-  return DAILY_ROUTINE_TODO_ORDER.get(todo.title) ?? Number.MAX_SAFE_INTEGER;
+  const defaultRoutineIndex = DEFAULT_ROUTINE_TODOS.findIndex((routine) => routine.title === todo.title);
+  return defaultRoutineIndex === -1 ? Number.MAX_SAFE_INTEGER : defaultRoutineIndex;
+}
+
+function createDefaultRoutineTemplates(): RoutineTemplate[] {
+  const now = new Date().toISOString();
+  const today = getTodayString();
+  return DEFAULT_ROUTINE_TODOS.map((routine, index) => ({
+    id: `default-routine-${index}`,
+    title: routine.title,
+    priority: routine.priority,
+    category: routine.category,
+    enabled: true,
+    order: index,
+    startsOn: today,
+    createdAt: now,
+    updatedAt: now
+  }));
+}
+
+function normalizeRoutineTemplates(value: unknown): RoutineTemplate[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return createDefaultRoutineTemplates();
+  }
+
+  return sortRoutineTemplates(value.map((template, index) => normalizeRoutineTemplate(template as Partial<RoutineTemplate>, index)));
+}
+
+function normalizeRoutineTemplate(template: Partial<RoutineTemplate>, index: number): RoutineTemplate {
+  const now = new Date().toISOString();
+  return {
+    id: template.id ?? randomUUID(),
+    title: template.title?.trim() || `루틴 ${index + 1}`,
+    priority: template.priority ?? 'medium',
+    category: cleanOptional(template.category),
+    enabled: template.enabled ?? true,
+    order: template.order ?? index,
+    startsOn: template.startsOn ?? getTodayString(),
+    createdAt: template.createdAt ?? now,
+    updatedAt: template.updatedAt ?? now
+  };
+}
+
+function sortRoutineTemplates(templates: RoutineTemplate[]): RoutineTemplate[] {
+  return [...templates].sort((a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt));
+}
+
+function getNextRoutineOrder(templates: RoutineTemplate[]): number {
+  return templates.reduce((maxOrder, template) => Math.max(maxOrder, template.order), -1) + 1;
 }
 
 function normalizeTodo(todo: TodoItem): TodoItem {
@@ -261,6 +375,12 @@ function normalizeTodo(todo: TodoItem): TodoItem {
 
 function getTodayString(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getTomorrowString(date = new Date()): string {
+  const tomorrow = new Date(date);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return getTodayString(tomorrow);
 }
 
 function isFileMissingError(error: unknown): boolean {

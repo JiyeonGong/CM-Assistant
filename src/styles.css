@@ -5,7 +5,7 @@
   --paper: #fbfaf7;
   --panel: #ffffff;
   --soft: #f4f0e8;
-  --accent: #2859ff;
+  --accent: #893DD1;
   --accent-ink: #ffffff;
   --danger: #d34335;
   color: var(--ink);
@@ -638,6 +638,60 @@ button:disabled {
   gap: 0;
 }
 
+.routine-manager-panel {
+  margin-top: 20px;
+}
+
+.routine-template-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.routine-template-list {
+  display: grid;
+  gap: 0;
+}
+
+.routine-template-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.routine-template-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.routine-template-item:last-child {
+  border-bottom: 0;
+}
+
+.routine-template-item.disabled {
+  opacity: 0.55;
+}
+
+.routine-template-item strong,
+.routine-template-item span {
+  display: block;
+}
+
+.routine-template-item span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.routine-template-message {
+  margin-top: 14px;
+}
+
 .quick-message-layout {
   display: grid;
   grid-template-columns: 0.85fr 1.15fr;
@@ -764,11 +818,24 @@ button:disabled {
 }
 
 .todo-row {
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 1fr;
   align-items: center;
   border-width: 0 0 1px;
   border-radius: 0;
   background: transparent;
+}
+
+.todo-row > div:first-child {
+  grid-column: auto;
+}
+
+.todo-row .todo-card-meta {
+  grid-column: auto;
+}
+
+.todo-row .todo-card-actions {
+  grid-column: auto;
+  justify-content: flex-start;
 }
 
 .todo-card.priority-high {
@@ -813,6 +880,12 @@ button:disabled {
   justify-content: space-between;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.todo-card-actions button,
+.todo-card-actions select {
+  white-space: nowrap;
 }
 
 .todo-card-actions select {
@@ -821,6 +894,22 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
+}
+
+.todo-card-actions .secondary-button,
+.todo-card-actions .primary-button,
+.todo-card-actions .text-button {
+  padding: 8px 10px;
+}
+
+.todo-edit-form {
+  display: grid;
+  gap: 10px;
+}
+
+.todo-edit-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .text-button {
@@ -851,6 +940,7 @@ button:disabled {
   .quick-message-layout,
   .quick-add-form,
   .todo-form,
+  .routine-template-form,
   .todo-board,
   .todo-list-layout,
   .button-row,
@@ -871,5 +961,16 @@ button:disabled {
   .message-action-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .routine-template-item {
+    grid-template-columns: 1fr;
+  }
+
+  .routine-template-actions,
+  .todo-card-actions,
+  .todo-edit-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

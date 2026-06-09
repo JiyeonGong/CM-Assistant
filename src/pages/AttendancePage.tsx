@@ -95,7 +95,7 @@ export default function AttendancePage() {
     }
 
     window.cmAssistant.copyReport(generatedReport, convertSlackMarkdownToClipboardHtml(generatedReport));
-    setMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 볼드 서식이 함께 적용됩니다.' });
+    setMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 마크다운이 함께 적용됩니다.' });
   }
 
   return (
