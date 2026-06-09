@@ -1,7 +1,86 @@
 export function convertSlackMarkdownToClipboardHtml(text: string): string {
-  const htmlLines = text.split('\n').map((line) => convertLineToHtml(line));
+  const htmlLines: string[] = [];
+  let listItems: ListItem[] = [];
 
-  return `<div>${htmlLines.join('<br>')}</div>`;
+  for (const line of text.split('\n')) {
+    const listLine = parseListLine(line);
+    if (listLine) {
+      listItems = appendListItem(listItems, listLine);
+      continue;
+    }
+
+    flushListItems(htmlLines, listItems);
+    listItems = [];
+    htmlLines.push(line.trim() ? `<div>${convertLineToHtml(line)}</div>` : '<br>');
+  }
+
+  flushListItems(htmlLines, listItems);
+
+  return `<div>${htmlLines.join('')}</div>`;
+}
+
+interface ListItem {
+  content: string;
+  children: ListItem[];
+}
+
+interface ParsedListLine {
+  level: number;
+  content: string;
+}
+
+interface ListStackItem {
+  level: number;
+  children: ListItem[];
+}
+
+function parseListLine(line: string): ParsedListLine | null {
+  const match = line.match(/^(\s*)[-•◦]\s+(.+)$/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    level: Math.floor(match[1].length / 2),
+    content: match[2]
+  };
+}
+
+function appendListItem(items: ListItem[], parsedLine: ParsedListLine): ListItem[] {
+  const nextItems = [...items];
+  const stack: ListStackItem[] = [{ level: -1, children: nextItems }];
+
+  rebuildListStack(nextItems, stack);
+
+  while (stack.length > 1 && stack[stack.length - 1].level >= parsedLine.level) {
+    stack.pop();
+  }
+
+  const node = { content: parsedLine.content, children: [] };
+  stack[stack.length - 1].children.push(node);
+  return nextItems;
+}
+
+function rebuildListStack(items: ListItem[], stack: ListStackItem[]): void {
+  let currentItems = items;
+  let level = 0;
+
+  while (currentItems.length > 0) {
+    const lastItem = currentItems[currentItems.length - 1];
+    stack.push({ level, children: lastItem.children });
+    currentItems = lastItem.children;
+    level += 1;
+  }
+}
+
+function flushListItems(htmlLines: string[], items: ListItem[]): void {
+  if (items.length > 0) {
+    htmlLines.push(renderList(items));
+  }
+}
+
+function renderList(items: ListItem[]): string {
+  return `<ul>${items.map((item) => `<li>${convertBoldMarkers(escapeHtml(item.content))}${item.children.length ? renderList(item.children) : ''}</li>`).join('')}</ul>`;
 }
 
 function convertLineToHtml(line: string): string {

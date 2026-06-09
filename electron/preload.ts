@@ -23,6 +23,7 @@ const api = {
   getSavedQuickMessages: (): Promise<SavedQuickMessages> => ipcRenderer.invoke('quickMessages:get'),
   saveQuickMessage: (key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> =>
     ipcRenderer.invoke('quickMessages:save', key, value),
+  showNotification: (title: string, body: string): Promise<boolean> => ipcRenderer.invoke('notification:show', title, body),
   copyText: (text: string): void => clipboard.writeText(text),
   copyReport: (text: string, html: string): void => clipboard.write({ text, html })
 };

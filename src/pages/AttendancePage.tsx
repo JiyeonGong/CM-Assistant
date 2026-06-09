@@ -106,7 +106,6 @@ export default function AttendancePage() {
           <h1>출결을 확인하고 바로 공유해요</h1>
           <p className="hero-copy">출석부 입력, 분석 결과 확인, 보고 멘트 복사까지 한 흐름으로 처리합니다.</p>
         </div>
-        <div className="privacy-badge">개인정보 서버 전송 없음</div>
       </section>
 
       <section className="panel input-panel">

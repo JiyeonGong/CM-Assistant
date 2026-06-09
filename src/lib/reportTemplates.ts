@@ -5,10 +5,10 @@ export function generateMorningAttendanceTemplate(cohortName: string, date = new
 
   return [
     `*[${cohortName}] ${dateText}(${dayOfWeek}) 오전 출결 현황 공유*`,
-    '- *출석:* 00명 (전체: 00명)',
-    '- *지각/미입실:* 00명',
-    '- *휴공가:* 00명',
-    '- *결석:* 00명'
+    '- *출석:* 0명 (전체: 0명)',
+    '- *지각/미입실:* 0명',
+    '- *휴공가:* 0명',
+    '- *결석:* 0명'
   ].join('\n');
 }
 
@@ -17,10 +17,10 @@ export function generateAfternoonAttendanceTemplate(cohortName: string, date = n
 
   return [
     `*[${cohortName}] ${dateText}일(${dayOfWeek}) 오후 출결 현황 공유*`,
-    '- *Zep 접속자:* 00명',
-    '- *외출:* 00명',
-    '- *추가 휴공가:* 00명',
-    '- *결석:* 00명'
+    '- *Zep 접속자:* 0명',
+    '- *외출:* 0명',
+    '- *추가 휴공가:* 0명',
+    '- *결석:* 0명'
   ].join('\n');
 }
 
@@ -29,14 +29,14 @@ export function generateFinalAttendanceTemplate(cohortName: string, date = new D
 
   return [
     `*[${cohortName}] ${dateText}(${dayOfWeek}) 최종 확정 출결 공유*`,
-    '- *출석:* 00명(전체 00명)',
-    '- *퇴실 QR 미촬영:* 00명',
-    '- *지각/외출/조퇴:* 00명',
+    '- *출석:* 0명(전체 0명)',
+    '- *퇴실 QR 미촬영:* 0명',
+    '- *지각/외출/조퇴:* 0명',
     '',
-    '- *결석:* 00명',
+    '- *결석:* 0명',
     '',
     '- *출석입력요청 검토 결과*',
-    '  - *검토 대상:* 00건',
+    '  - *검토 대상:* 0건',
     '  - *검토 결과:* -'
   ].join('\n');
 }

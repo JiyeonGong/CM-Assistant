@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electron';
 import { join } from 'node:path';
 import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
 import {
@@ -15,6 +15,10 @@ import {
   updateRoutineTemplateEnabled,
   updateTodo
 } from './services/appDataStore';
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.cm-assistant.app');
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -72,6 +76,15 @@ app.whenReady().then(() => {
   ipcMain.handle('routineTemplates:updateEnabled', async (_event, id: string, enabled: boolean) => updateRoutineTemplateEnabled(id, enabled));
   ipcMain.handle('quickMessages:get', async () => getSavedQuickMessages());
   ipcMain.handle('quickMessages:save', async (_event, key, value: string) => saveQuickMessage(key, value));
+  ipcMain.handle('notification:show', async (_event, title: string, body: string) => {
+    if (!Notification.isSupported()) {
+      return false;
+    }
+
+    shell.beep();
+    new Notification({ title, body, silent: false }).show();
+    return true;
+  });
 
   createWindow();
 });

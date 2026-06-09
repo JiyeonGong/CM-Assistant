@@ -227,7 +227,15 @@ export async function getSavedQuickMessages(): Promise<SavedQuickMessages> {
 }
 
 export async function saveQuickMessage(key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> {
-  if (key !== 'morningGreeting' && key !== 'eveningGreeting' && key !== 'instructorAttendanceShare') {
+  const allowedKeys: Array<keyof SavedQuickMessages> = [
+    'morningGreeting',
+    'eveningGreeting',
+    'instructorAttendanceShare',
+    'instructorMorningAttendanceShare',
+    'instructorAfternoonAttendanceShare'
+  ];
+
+  if (!allowedKeys.includes(key)) {
     throw new Error('저장할 수 없는 멘트 종류입니다.');
   }
 
