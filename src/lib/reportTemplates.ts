@@ -45,14 +45,15 @@ export function generateMorningAttendanceReport(summary: AttendanceSummary): str
   const lateOrMissingPeople = [...summary.missingEntryPeople, ...summary.latePeople];
   const missingEntryNames = new Set(summary.missingEntryPeople.map((person) => person.name));
   const morningAbsentPeople = summary.absentPeople.filter((person) => !missingEntryNames.has(person.name));
-  const morningPresentCount = Math.max(summary.totalCount - lateOrMissingPeople.length, 0);
+  const morningPresentCount = Math.max(summary.totalCount - lateOrMissingPeople.length - morningAbsentPeople.length, 0);
 
   return [
     `*[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 오전 출결 현황 공유*`,
     `- *출석:* ${morningPresentCount}명 (전체: ${summary.totalCount}명)`,
     `- *지각/미입실:* ${lateOrMissingPeople.length}명`,
     formatNestedPeopleLines(lateOrMissingPeople),
-    `- *휴공가:* ${summary.officialLeaveCount}명${formatOfficialLeaveInline(summary.officialLeavePeople)}`,
+    `- *휴공가:* ${summary.officialLeaveCount}명`,
+    formatOfficialLeaveLines(summary.officialLeavePeople),
     `- *결석:* ${morningAbsentPeople.length}명${formatPeopleInline(morningAbsentPeople)}`
   ]
     .filter(Boolean)
@@ -72,18 +73,24 @@ export function generateAfternoonAttendanceReport(summary: AttendanceSummary): s
 }
 
 export function generateFinalAttendanceReport(summary: AttendanceSummary): string {
-  const exceptionCount = summary.lateCount + summary.outingCount + summary.earlyLeaveCount;
-  const exceptionPeople = [...summary.latePeople, ...summary.outingPeople, ...summary.earlyLeavePeople];
+  const finalAbsentPeople = getUniquePeople([...summary.absentPeople, ...summary.missingEntryPeople, ...summary.qrMissingPeople]);
+  const finalAbsentNames = new Set(finalAbsentPeople.map((person) => person.name));
+  const exceptionPeople = [...summary.latePeople, ...summary.outingPeople, ...summary.earlyLeavePeople].filter(
+    (person) => !finalAbsentNames.has(person.name)
+  );
+  const qrMissingPeople = summary.qrMissingPeople.filter((person) => !finalAbsentNames.has(person.name));
+  const exceptionCount = countUniquePeople(exceptionPeople);
+  const finalPresentCount = Math.max(summary.totalCount - countUniquePeople([...exceptionPeople, ...finalAbsentPeople]), 0);
 
   return [
     `*[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 최종 확정 출결 공유*`,
-    `- *출석:* ${summary.presentCount}명(전체 ${summary.totalCount}명)`,
-    `- *퇴실 QR 미촬영:* ${summary.qrMissingCount}명${formatPeopleInline(summary.qrMissingPeople)}`,
+    `- *출석:* ${finalPresentCount}명(전체 ${summary.totalCount}명)`,
+    `- *퇴실 QR 미촬영:* ${qrMissingPeople.length}명${formatPeopleInline(qrMissingPeople)}`,
     `- *지각/외출/조퇴:* ${exceptionCount}명`,
     formatNestedPeopleLines(exceptionPeople),
     '',
-    `- *결석:* ${summary.absentCount}명`,
-    formatNestedPeopleLines(summary.absentPeople),
+    `- *결석:* ${finalAbsentPeople.length}명`,
+    formatNestedPeopleLines(finalAbsentPeople),
     '',
     '- *출석입력요청 검토 결과*',
     `  - *검토 대상:* ${summary.reviewRequestCount}건`,
@@ -123,12 +130,14 @@ function formatPeopleInline(people: Array<PersonNote | PersonTimeNote>): string 
   return `(${text})`;
 }
 
-function formatOfficialLeaveInline(people: PersonNote[]): string {
+function formatOfficialLeaveLines(people: PersonNote[]): string {
   if (people.length === 0) {
     return '';
   }
 
-  return `(${people.map((person) => `${person.name}${person.note ? ` - ${person.note}` : ''}`).join(', ')})`;
+  return people
+    .map((person) => `  - ${person.name}${person.note ? `(${person.note})` : ''}`)
+    .join('\n');
 }
 
 function formatPeopleLines(people: Array<PersonNote | PersonTimeNote>): string {
@@ -155,6 +164,21 @@ function formatNestedPeopleLines(people: Array<PersonNote | PersonTimeNote>): st
     .split('\n')
     .map((line) => `  - ${line}`)
     .join('\n');
+}
+
+function countUniquePeople(people: Array<PersonNote | PersonTimeNote>): number {
+  return new Set(people.map((person) => person.name)).size;
+}
+
+function getUniquePeople(people: Array<PersonNote | PersonTimeNote>): Array<PersonNote | PersonTimeNote> {
+  const seenNames = new Set<string>();
+  return people.filter((person) => {
+    if (seenNames.has(person.name)) {
+      return false;
+    }
+    seenNames.add(person.name);
+    return true;
+  });
 }
 
 function formatReportDate(date: Date): { dateText: string; dayOfWeek: string } {

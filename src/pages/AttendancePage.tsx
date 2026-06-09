@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   generateAfternoonAttendanceReport,
   generateAfternoonAttendanceTemplate,
@@ -12,6 +12,7 @@ import type { AttendanceSummary } from '../types/attendance';
 
 type MessageType = 'info' | 'error' | 'success';
 type AttendanceInputMode = 'file' | 'paste';
+type ReportType = 'morning' | 'afternoon' | 'final';
 
 interface UiMessage {
   type: MessageType;
@@ -28,7 +29,18 @@ export default function AttendancePage() {
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [generatedReport, setGeneratedReport] = useState('');
   const [message, setMessage] = useState<UiMessage | null>(null);
+  const [toastMessage, setToastMessage] = useState<UiMessage | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setToastMessage(null), 2_400);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   async function handleSelectFile(): Promise<void> {
     setMessage(null);
@@ -62,6 +74,7 @@ export default function AttendancePage() {
           : await window.cmAssistant.analyzePastedAttendance(pastedTableText, trimmedCohortName);
       setSummary(result);
       setGeneratedReport(generateMorningAttendanceReport(result));
+      setSelectedReportType('morning');
       setMessage({ type: 'success', text: '출결 분석이 완료되어 오전 보고 멘트를 자동 생성했습니다.' });
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.' });
@@ -73,18 +86,21 @@ export default function AttendancePage() {
   function handleGenerateMorningReport(): void {
     const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
     setGeneratedReport(summary ? generateMorningAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateMorningAttendanceTemplate(trimmedCohortName));
+    setSelectedReportType('morning');
     setMessage({ type: 'info', text: summary ? '오전 출결 보고 멘트를 생성했습니다.' : '오전 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateAfternoonReport(): void {
     const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
     setGeneratedReport(summary ? generateAfternoonAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateAfternoonAttendanceTemplate(trimmedCohortName));
+    setSelectedReportType('afternoon');
     setMessage({ type: 'info', text: summary ? '오후 출결 보고 멘트를 생성했습니다.' : '오후 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateFinalReport(): void {
     const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
     setGeneratedReport(summary ? generateFinalAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateFinalAttendanceTemplate(trimmedCohortName));
+    setSelectedReportType('final');
     setMessage({ type: 'info', text: summary ? '최종 확정 출결 보고 멘트를 생성했습니다.' : '최종 확정 출결 보고 기본 양식을 생성했습니다.' });
   }
 
@@ -95,11 +111,16 @@ export default function AttendancePage() {
     }
 
     window.cmAssistant.copyReport(generatedReport, convertSlackMarkdownToClipboardHtml(generatedReport));
-    setMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 마크다운이 함께 적용됩니다.' });
+    setToastMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 마크다운이 함께 적용됩니다.' });
   }
 
   return (
     <>
+      {toastMessage && (
+        <div className={`quick-message-toast ${toastMessage.type}`} role="status" aria-live="polite">
+          {toastMessage.text}
+        </div>
+      )}
       <section className="hero-card compact-hero simple-hero">
         <div>
           <p className="eyebrow">Attendance</p>
@@ -163,9 +184,9 @@ export default function AttendancePage() {
             <p>출석부가 없어도 기본 양식을 만들고 바로 복사할 수 있습니다.</p>
           </div>
           <div className="button-row three-columns">
-            <button type="button" className="primary-button" onClick={handleGenerateMorningReport}>오전 보고</button>
-            <button type="button" className="secondary-button" onClick={handleGenerateAfternoonReport}>오후 보고</button>
-            <button type="button" className="secondary-button" onClick={handleGenerateFinalReport}>최종 보고</button>
+            <button type="button" className={getReportButtonClassName('morning', selectedReportType)} onClick={handleGenerateMorningReport}>오전 보고</button>
+            <button type="button" className={getReportButtonClassName('afternoon', selectedReportType)} onClick={handleGenerateAfternoonReport}>오후 보고</button>
+            <button type="button" className={getReportButtonClassName('final', selectedReportType)} onClick={handleGenerateFinalReport}>최종 보고</button>
           </div>
           <textarea className="report-output" value={generatedReport} readOnly placeholder="생성된 Slack 문구가 여기에 표시됩니다." />
           <button type="button" className="copy-button" onClick={handleCopy}>복사하기</button>
@@ -230,4 +251,8 @@ function EmptyState({ text }: { text: string }) {
 
 function getFileName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() || filePath;
+}
+
+function getReportButtonClassName(type: ReportType, selectedType: ReportType | null): string {
+  return selectedType === type ? 'primary-button report-type-button' : 'secondary-button report-type-button';
 }
