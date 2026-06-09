@@ -9,10 +9,10 @@ import type { CreateTodoInput, TodoItem, UpdateTodoInput } from './types/todo';
 type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo';
 
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'attendance', label: 'Attendance' },
-  { id: 'quickMessages', label: 'Messages' },
-  { id: 'todo', label: 'Todo' }
+  { id: 'dashboard', label: '오늘' },
+  { id: 'attendance', label: '출결' },
+  { id: 'quickMessages', label: '멘트' },
+  { id: 'todo', label: '업무' }
 ];
 
 export default function App() {
@@ -78,7 +78,7 @@ export default function App() {
       <nav className="app-nav">
         <div>
           <strong>CM Assistant</strong>
-          <span>Local workflow tool</span>
+          <span>Class manager workspace</span>
         </div>
         <div className="nav-button-group">
           {NAV_ITEMS.map((item) => (

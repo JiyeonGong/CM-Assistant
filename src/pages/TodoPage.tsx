@@ -17,6 +17,8 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
   const [category, setCategory] = useState('');
   const [dueDate, setDueDate] = useState(getTodayString());
   const [description, setDescription] = useState('');
+  const visibleTodos = todos.filter((todo) => todo.status !== 'done');
+  const completedTodos = todos.filter((todo) => todo.status === 'done');
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -28,17 +30,17 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
 
   return (
     <>
-      <section className="hero-card compact-hero">
+      <section className="hero-card compact-hero simple-hero">
         <div>
           <p className="eyebrow">Todo</p>
-          <h1>업무 관리</h1>
-          <p className="hero-copy">오늘 해야 할 업무를 빠르게 등록하고 상태를 관리합니다.</p>
+          <h1>전체 업무를 정리해요</h1>
+          <p className="hero-copy">Dashboard에 보이지 않는 업무까지 한 번에 관리합니다.</p>
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel quiet-panel">
         <form className="todo-form" onSubmit={handleSubmit}>
-          <input className="text-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="새 할 일 입력" />
+          <input className="text-input line-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="새 업무" />
           <select className="text-input" value={priority} onChange={(event) => setPriority(event.target.value as TodoPriority)}>
             <option value="high">높음</option>
             <option value="medium">보통</option>
@@ -51,21 +53,34 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
         </form>
       </section>
 
-      <section className="todo-board">
-        {STATUS_ORDER.map((status) => (
-          <div className="panel todo-column" key={status}>
-            <div className="section-heading">
-              <p className="eyebrow">{status}</p>
-              <h2>{TODO_STATUS_LABELS[status]}</h2>
+      <section className="todo-list-layout">
+        <div className="panel todo-list-panel">
+          <div className="section-heading split-heading">
+            <div>
+              <p className="eyebrow">Open</p>
+              <h2>처리할 업무</h2>
             </div>
-            <div className="todo-card-list">
-              {todos.filter((todo) => todo.status === status).map((todo) => (
-                <TodoCard todo={todo} onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} key={todo.id} />
-              ))}
-              {todos.filter((todo) => todo.status === status).length === 0 && <div className="empty-state small">비어 있음</div>}
-            </div>
+            <strong>{visibleTodos.length}개</strong>
           </div>
-        ))}
+          <div className="todo-row-list">
+            {visibleTodos.map((todo) => <TodoCard todo={todo} onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} key={todo.id} />)}
+            {visibleTodos.length === 0 && <div className="empty-state small">처리할 업무가 없습니다.</div>}
+          </div>
+        </div>
+
+        <div className="panel todo-list-panel muted-panel">
+          <div className="section-heading split-heading">
+            <div>
+              <p className="eyebrow">Done</p>
+              <h2>완료한 업무</h2>
+            </div>
+            <strong>{completedTodos.length}개</strong>
+          </div>
+          <div className="todo-row-list">
+            {completedTodos.map((todo) => <TodoCard todo={todo} onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} key={todo.id} />)}
+            {completedTodos.length === 0 && <div className="empty-state small">완료한 업무가 없습니다.</div>}
+          </div>
+        </div>
       </section>
     </>
   );
@@ -73,7 +88,7 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
 
 function TodoCard({ todo, onUpdateTodo, onDeleteTodo }: Pick<TodoPageProps, 'onUpdateTodo' | 'onDeleteTodo'> & { todo: TodoItem }) {
   return (
-    <article className={`todo-card priority-${todo.priority}`}>
+    <article className={`todo-card todo-row priority-${todo.priority}`}>
       <div>
         <strong>{todo.title}</strong>
         {todo.description && <p>{todo.description}</p>}

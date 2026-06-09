@@ -109,16 +109,16 @@ export default function AttendancePage() {
 
   return (
     <>
-      <section className="hero-card compact-hero">
+      <section className="hero-card compact-hero simple-hero">
         <div>
           <p className="eyebrow">Attendance</p>
-          <h1>출결 보고</h1>
-          <p className="hero-copy">단위기간 출석부를 분석해 오전, 오후, 최종 Slack 보고 멘트를 생성합니다.</p>
+          <h1>출결을 확인하고 바로 공유해요</h1>
+          <p className="hero-copy">출석부 입력, 분석 결과 확인, 보고 멘트 복사까지 한 흐름으로 처리합니다.</p>
         </div>
         <div className="privacy-badge">개인정보 서버 전송 없음</div>
       </section>
 
-      <section className="panel controls-panel">
+      <section className="panel controls-panel input-panel">
         <label className="field-label" htmlFor="cohortName">기수명</label>
         <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
 
@@ -129,7 +129,7 @@ export default function AttendancePage() {
 
         {inputMode === 'file' ? (
           <div className="file-row">
-            <button type="button" className="primary-button" onClick={handleSelectFile}>엑셀 파일 불러오기</button>
+            <button type="button" className="primary-button" onClick={handleSelectFile}>출석부 불러오기</button>
             <div className="file-info">
               <span>선택된 파일</span>
               <strong>{filePath ? getFileName(filePath) : '없음'}</strong>
@@ -144,7 +144,7 @@ export default function AttendancePage() {
           />
         )}
 
-        <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '출결 분석하기'}</button>
+        <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '분석하기'}</button>
         {message && <p className={`status-message ${message.type}`}>{message.text}</p>}
       </section>
 
@@ -152,7 +152,8 @@ export default function AttendancePage() {
         <section className="panel">
           <div className="section-heading">
             <p className="eyebrow">Summary</p>
-            <h2>분석 결과 요약</h2>
+            <h2>분석 결과</h2>
+            <p>보고 전에 이상 인원과 QR 미촬영자를 확인합니다.</p>
           </div>
           {summary ? <SummaryCard summary={summary} /> : <EmptyState text="출석부를 선택한 뒤 분석을 실행해주세요." />}
         </section>
@@ -160,7 +161,8 @@ export default function AttendancePage() {
         <section className="panel report-panel">
           <div className="section-heading">
             <p className="eyebrow">Slack Text</p>
-            <h2>보고 멘트 생성</h2>
+            <h2>보고 멘트</h2>
+            <p>필요한 시간대의 문구를 만들고 바로 복사합니다.</p>
           </div>
           <div className="button-row three-columns">
             <button type="button" className="primary-button" onClick={handleGenerateMorningReport}>오전 보고</button>

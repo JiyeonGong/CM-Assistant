@@ -17,8 +17,12 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
   const routineTodos = todayTodos.filter((todo) => todo.source === 'routine' && todo.status !== 'done');
   const manualTodos = todayTodos.filter((todo) => todo.source === 'manual' && todo.status !== 'done');
   const completedToday = todos.filter((todo) => isCompletedToday(todo));
+  const todayRoutineTodos = todos.filter((todo) => todo.source === 'routine' && todo.dueDate === getTodayInputValue());
+  const routineTotal = todayRoutineTodos.length;
+  const routineDone = todayRoutineTodos.filter((todo) => todo.status === 'done').length;
   const stats = getTodoStats(todos);
   const activeTodo = todos.find((todo) => todo.status === 'in_progress');
+  const nextTodo = activeTodo ?? routineTodos[0] ?? manualTodos[0];
 
   async function handleQuickAdd(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -37,43 +41,52 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
 
   return (
     <>
-      <section className="hero-card compact-hero">
-        <div>
-          <p className="eyebrow">Dashboard</p>
-          <h1>오늘의 업무</h1>
-          <p className="hero-copy">{getKoreanDateText()}</p>
+      <section className="hero-card dashboard-hero">
+        <div className="hero-main-copy">
+          <p className="eyebrow">Today</p>
+          <p className="hero-intent">다음으로 할 일</p>
+          <h1>{nextTodo ? nextTodo.title : '오늘 업무가 정리됐어요'}</h1>
+          <p className="hero-copy">{nextTodo ? `${formatTodoMeta(nextTodo)} · ${getKoreanDateText()}` : getKoreanDateText()}</p>
         </div>
-        <button type="button" className="primary-button" onClick={onNavigateTodo}>Todo 관리</button>
+        <div className="hero-side-panel">
+          <span>오늘 진행</span>
+          <strong>루틴 {routineDone}/{routineTotal || 5}</strong>
+          <small>추가 {manualTodos.length}개</small>
+          <button type="button" className="secondary-button light-button" onClick={onNavigateTodo}>전체 업무 보기</button>
+        </div>
       </section>
 
-      <section className="panel quick-add-panel">
+      <section className="panel quick-add-panel quiet-panel">
         <form className="quick-add-form" onSubmit={handleQuickAdd}>
-          <input className="text-input" value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="생각난 업무를 바로 입력하고 Enter" />
-          <button type="submit" className="accent-button">빠른 추가</button>
+          <input className="text-input line-input" value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="생각난 업무를 적어두세요" />
+          <button type="submit" className="accent-button">추가</button>
         </form>
       </section>
 
       <section className="dashboard-grid">
-        <div className="panel">
+        <div className="panel focus-panel">
           <div className="section-heading">
-            <p className="eyebrow">Manual</p>
-            <h2>오늘 추가 업무</h2>
+            <p className="eyebrow">Routine</p>
+            <h2>오늘 루틴</h2>
+            <p>순서대로 확인하면 오늘 출결 운영이 정리됩니다.</p>
           </div>
-          <TodoPreviewList todos={manualTodos} emptyText="오늘 추가한 업무가 없습니다." mode="manual" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={routineTodos} emptyText="남은 루틴이 없습니다." mode="routine" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
           <div className="section-heading">
-            <p className="eyebrow">Routine</p>
-            <h2>오늘 루틴 업무</h2>
+            <p className="eyebrow">Added</p>
+            <h2>추가 업무</h2>
+            <p>오늘 처리할 비정기 업무만 모아봅니다.</p>
           </div>
-          <TodoPreviewList todos={routineTodos} emptyText="오늘 루틴 업무가 없습니다." mode="routine" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={manualTodos} emptyText="추가 업무가 없습니다." mode="manual" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
           <div className="section-heading">
             <p className="eyebrow">Progress</p>
             <h2>진행 중</h2>
+            <p>지금 집중할 업무입니다.</p>
           </div>
           {activeTodo ? <TodoPreviewItem todo={activeTodo} mode="active" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} /> : <div className="empty-state small">진행 중인 업무가 없습니다.</div>}
         </div>
@@ -82,16 +95,17 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
           <div className="section-heading">
             <p className="eyebrow">Done</p>
             <h2>오늘 완료</h2>
+            <p>오늘 체크한 업무 기록입니다.</p>
           </div>
           <TodoPreviewList todos={completedToday} emptyText="오늘 완료한 업무가 없습니다." mode="readonly" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
-        <div className="panel">
+        <div className="panel dashboard-wide-panel">
           <div className="section-heading">
             <p className="eyebrow">Stats</p>
-            <h2>전체 업무 상태</h2>
+            <h2>전체 상태</h2>
           </div>
-          <div className="summary-grid two-columns">
+          <div className="summary-grid five-columns">
             <StatItem label="전체" value={`${stats.total}개`} />
             <StatItem label="진행 전" value={`${stats.todo}개`} />
             <StatItem label="진행 중" value={`${stats.inProgress}개`} />
