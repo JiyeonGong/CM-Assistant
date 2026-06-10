@@ -11,12 +11,20 @@ export function convertSlackMarkdownToClipboardHtml(text: string): string {
 
     flushListItems(htmlLines, listItems);
     listItems = [];
-    htmlLines.push(line.trim() ? `<div>${convertLineToHtml(line)}</div>` : '<br>');
+    htmlLines.push(line.trim() ? renderParagraph(line) : '<p><br></p>');
   }
 
   flushListItems(htmlLines, listItems);
 
-  return `<div>${htmlLines.join('')}</div>`;
+  return [
+    '<!doctype html>',
+    '<html>',
+    '<head><meta charset="utf-8"></head>',
+    '<body>',
+    htmlLines.join(''),
+    '</body>',
+    '</html>'
+  ].join('');
 }
 
 interface ListItem {
@@ -80,7 +88,16 @@ function flushListItems(htmlLines: string[], items: ListItem[]): void {
 }
 
 function renderList(items: ListItem[]): string {
-  return `<ul>${items.map((item) => `<li>${convertBoldMarkers(escapeHtml(item.content))}${item.children.length ? renderList(item.children) : ''}</li>`).join('')}</ul>`;
+  return `<ul style="margin:0 0 0 20px;padding-left:20px;">${items.map(renderListItem).join('')}</ul>`;
+}
+
+function renderListItem(item: ListItem): string {
+  const children = item.children.length ? renderList(item.children) : '';
+  return `<li style="margin:0;padding:0;"><span>${convertInlineMarkdown(item.content)}</span>${children}</li>`;
+}
+
+function renderParagraph(line: string): string {
+  return `<p style="margin:0;">${convertLineToHtml(line)}</p>`;
 }
 
 function convertLineToHtml(line: string): string {
@@ -88,11 +105,15 @@ function convertLineToHtml(line: string): string {
   const content = line.slice(leadingSpaces.length);
   const indentation = '&nbsp;'.repeat(leadingSpaces.length);
 
-  return `${indentation}${convertBoldMarkers(escapeHtml(content))}`;
+  return `${indentation}${convertInlineMarkdown(content)}`;
 }
 
-function convertBoldMarkers(text: string): string {
-  return text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+function convertInlineMarkdown(text: string): string {
+  return convertBoldMarkers(escapeHtml(text));
+}
+
+function convertBoldMarkers(escapedText: string): string {
+  return escapedText.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
 }
 
 function escapeHtml(text: string): string {
