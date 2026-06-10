@@ -62,6 +62,59 @@ button:disabled {
   display: block;
 }
 
+.app-brand-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-info-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.app-info-button:hover,
+.app-info-button:focus-visible {
+  color: var(--ink);
+}
+
+.app-info-tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 20;
+  width: max-content;
+  max-width: 240px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.app-info-button:hover .app-info-tooltip,
+.app-info-button:focus-visible .app-info-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .app-nav span {
   margin-top: 2px;
   color: var(--muted);

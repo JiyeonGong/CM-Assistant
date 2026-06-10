@@ -77,7 +77,15 @@ export default function App() {
     <main className="app-shell">
       <nav className="app-nav">
         <div>
-          <strong>CM Assistant</strong>
+          <div className="app-brand-row">
+            <strong>CM Assistant</strong>
+            <button type="button" className="app-info-button" aria-label="앱 제작자 및 문의 정보">
+              ?
+              <span className="app-info-tooltip" role="tooltip">
+                Made by Jiyeon Gong<br />문의: jeeye0704@gmail.com
+              </span>
+            </button>
+          </div>
           <span>Class manager workspace</span>
         </div>
         <div className="nav-button-group">
