@@ -386,8 +386,11 @@ function getNextRoutineOrder(templates: RoutineTemplate[]): number {
 }
 
 function normalizeTodo(todo: TodoItem): TodoItem {
+  const completedAt = todo.completedAt ?? (todo.status === 'done' ? todo.updatedAt ?? todo.createdAt : undefined);
+
   return {
     ...todo,
+    completedAt,
     source: todo.source ?? 'manual'
   };
 }

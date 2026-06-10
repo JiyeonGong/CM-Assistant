@@ -39,5 +39,9 @@ export function isTodoForToday(todo: TodoItem, today = getTodayString()): boolea
 }
 
 export function isCompletedToday(todo: TodoItem, today = getTodayString()): boolean {
-  return todo.status === 'done' && Boolean(todo.completedAt?.startsWith(today));
+  if (todo.status !== 'done') {
+    return false;
+  }
+
+  return Boolean(todo.completedAt?.startsWith(today)) || todo.dueDate === today;
 }
