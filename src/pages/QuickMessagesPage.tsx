@@ -21,8 +21,8 @@ type ToastMessage = {
 };
 
 export default function QuickMessagesPage() {
-  const categorySectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const reportPanelRef = useRef<HTMLDivElement | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('전체');
   const [selectedTemplate, setSelectedTemplate] = useState<QuickMessageTemplate | null>(null);
   const [generatedMessage, setGeneratedMessage] = useState('');
   const [spotCheckDiscordMessage, setSpotCheckDiscordMessage] = useState('');
@@ -108,10 +108,6 @@ export default function QuickMessagesPage() {
     window.requestAnimationFrame(() => {
       reportPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  }
-
-  function handleScrollToCategory(category: string): void {
-    categorySectionRefs.current[category]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function handleRefreshGeneratedMessage(): void {
@@ -255,23 +251,6 @@ export default function QuickMessagesPage() {
         </div>
       </section>
 
-      <nav className="work-category-rail" aria-label="업무 카테고리 바로가기">
-        {MESSAGE_CATEGORIES.map((category) => (
-          <button
-            type="button"
-            className={selectedTemplate?.category === category ? 'active' : ''}
-            onClick={(event) => {
-              handleScrollToCategory(category);
-              event.currentTarget.blur();
-            }}
-            key={category}
-          >
-            <span aria-hidden="true" />
-            <strong>{getCategoryRailLabel(category)}</strong>
-          </button>
-        ))}
-      </nav>
-
       <section className="quick-message-layout">
         <div className="panel">
           <div className="section-heading">
@@ -279,15 +258,22 @@ export default function QuickMessagesPage() {
             <h2>업무 선택</h2>
             <p>처리할 운영 업무를 선택하세요.</p>
           </div>
-          <div className="quick-message-category-list">
-            {MESSAGE_CATEGORIES.map((category) => (
-              <section
-                className="quick-message-category"
-                ref={(element) => {
-                  categorySectionRefs.current[category] = element;
-                }}
+          <nav className="work-category-rail" aria-label="업무 카테고리 바로가기">
+            {['전체', ...MESSAGE_CATEGORIES].map((category) => (
+              <button
+                type="button"
+                className={selectedCategory === category ? 'active' : ''}
+                onClick={() => setSelectedCategory(category)}
                 key={category}
               >
+                <span aria-hidden="true" />
+                <strong>{getCategoryRailLabel(category)}</strong>
+              </button>
+            ))}
+          </nav>
+          <div className="quick-message-category-list scrollable-work-categories">
+            {getVisibleMessageCategories(selectedCategory).map((category) => (
+              <section className="quick-message-category" key={category}>
                 <h3>{category}</h3>
                 <div className="quick-message-grid">
                   {QUICK_MESSAGE_TEMPLATES.filter((template) => template.category === category).map((template) => (
@@ -527,6 +513,8 @@ function normalizeTimeInput(value: string): string {
 
 function getCategoryRailLabel(category: string): string {
   switch (category) {
+    case '전체':
+      return '전체';
     case '불시점검':
       return '불시점검';
     case '로그 대조 결과 안내':
@@ -540,6 +528,10 @@ function getCategoryRailLabel(category: string): string {
     default:
       return category;
   }
+}
+
+function getVisibleMessageCategories(selectedCategory: string): string[] {
+  return selectedCategory === '전체' ? MESSAGE_CATEGORIES : [selectedCategory];
 }
 
 function isCompleteTime(value: string): boolean {

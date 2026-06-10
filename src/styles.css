@@ -887,38 +887,35 @@ button:disabled {
 }
 
 .calendar-detail-item.schedule-event-item {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid rgba(124, 91, 22, 0.18);
-  border-radius: 14px;
-  background: #fff9e8;
+  color: var(--ink);
 }
 
 .calendar-detail-item.no-class-item {
-  padding: 12px;
-  border: 1px solid rgba(155, 58, 34, 0.16);
-  border-radius: 14px;
-  background: #fff3ee;
+  color: var(--ink);
 }
 
 .calendar-detail-item.holiday-item {
-  padding: 12px;
-  border: 1px solid rgba(201, 55, 44, 0.16);
-  border-radius: 14px;
-  background: #fff0ed;
+  color: var(--ink);
 }
 
 .calendar-detail-item.leave-item {
-  padding: 12px;
-  border: 1px solid rgba(92, 69, 255, 0.16);
-  border-radius: 14px;
-  background: #f2f0ff;
+  color: var(--ink);
 }
 
 .calendar-detail-item.schedule-event-item span {
-  display: block;
-  margin-top: 4px;
+  color: #7c5b16;
+}
+
+.calendar-detail-item.no-class-item span {
+  color: #9b3a22;
+}
+
+.calendar-detail-item.holiday-item span {
+  color: #c9372c;
+}
+
+.calendar-detail-item.leave-item span {
+  color: #5c45ff;
 }
 
 .calendar-detail-item.schedule-event-item .text-button {
@@ -1339,7 +1336,6 @@ button:disabled {
   }
 
   .work-category-rail {
-    top: 8px;
     margin: 12px 0 16px;
     border-radius: 18px;
   }

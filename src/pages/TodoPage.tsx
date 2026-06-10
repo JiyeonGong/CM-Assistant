@@ -20,7 +20,7 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
   const [description, setDescription] = useState('');
   const [routineTemplates, setRoutineTemplates] = useState<RoutineTemplate[]>([]);
   const [routineTitle, setRoutineTitle] = useState('');
-  const [routineMessage, setRoutineMessage] = useState('');
+  const [routineToastMessage, setRoutineToastMessage] = useState('');
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [editingRoutineTitle, setEditingRoutineTitle] = useState('');
   const [showCompletedTodos, setShowCompletedTodos] = useState(false);
@@ -32,6 +32,15 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
   useEffect(() => {
     void loadRoutineTemplates();
   }, []);
+
+  useEffect(() => {
+    if (!routineToastMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setRoutineToastMessage(''), 2_400);
+    return () => window.clearTimeout(timeoutId);
+  }, [routineToastMessage]);
 
   async function loadRoutineTemplates(): Promise<void> {
     const templates = await window.cmAssistant.listRoutineTemplates();
@@ -54,26 +63,26 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
 
     await window.cmAssistant.createRoutineTemplate({ title: routineTitle, priority: 'medium', category: '내 루틴' });
     setRoutineTitle('');
-    setRoutineMessage('내일부터 매일 루틴으로 생성됩니다. 오늘만 필요한 일은 위에서 추가 업무로 등록하세요.');
+    setRoutineToastMessage('내일부터 매일 루틴으로 생성됩니다. 오늘만 필요한 일은 위에서 추가 업무로 등록하세요.');
     await loadRoutineTemplates();
   }
 
   async function handleToggleRoutineTemplate(template: RoutineTemplate): Promise<void> {
     await window.cmAssistant.updateRoutineTemplateEnabled(template.id, !template.enabled);
-    setRoutineMessage(!template.enabled ? '내일부터 다시 루틴으로 생성됩니다.' : '내일부터 이 루틴은 자동 생성되지 않습니다.');
+    setRoutineToastMessage(!template.enabled ? '내일부터 다시 루틴으로 생성됩니다.' : '내일부터 이 루틴은 자동 생성되지 않습니다.');
     await loadRoutineTemplates();
   }
 
   function handleStartEditRoutineTemplate(template: RoutineTemplate): void {
     setEditingRoutineId(template.id);
     setEditingRoutineTitle(template.title);
-    setRoutineMessage('');
+    setRoutineToastMessage('');
   }
 
   async function handleSaveRoutineTemplate(template: RoutineTemplate): Promise<void> {
     const title = editingRoutineTitle.trim();
     if (!title) {
-      setRoutineMessage('루틴 제목을 입력해주세요.');
+      setRoutineToastMessage('루틴 제목을 입력해주세요.');
       return;
     }
 
@@ -84,7 +93,7 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
 
     await window.cmAssistant.updateRoutineTemplate({ id: template.id, title });
     handleCancelEditRoutineTemplate();
-    setRoutineMessage('루틴 제목을 수정했습니다. 오늘 이미 생성된 업무는 그대로 두고 다음 생성부터 반영됩니다.');
+    setRoutineToastMessage('루틴 제목을 수정했습니다. 오늘 이미 생성된 업무는 그대로 두고 다음 생성부터 반영됩니다.');
     await loadRoutineTemplates();
   }
 
@@ -98,12 +107,17 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
     if (editingRoutineId === template.id) {
       handleCancelEditRoutineTemplate();
     }
-    setRoutineMessage('루틴을 삭제했습니다. 오늘 이미 생성된 업무는 그대로 두고 다음 생성부터 반영됩니다.');
+    setRoutineToastMessage('루틴을 삭제했습니다. 오늘 이미 생성된 업무는 그대로 두고 다음 생성부터 반영됩니다.');
     await loadRoutineTemplates();
   }
 
   return (
     <>
+      {routineToastMessage && (
+        <div className="quick-message-toast success" role="status" aria-live="polite">
+          {routineToastMessage}
+        </div>
+      )}
       <section className="hero-card compact-hero simple-hero">
         <div>
           <p className="eyebrow">Manage</p>
@@ -244,8 +258,6 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
             </div>
           ))}
         </div>
-
-        {routineMessage && <p className="status-message info routine-template-message">{routineMessage}</p>}
       </section>
     </>
   );
