@@ -37,7 +37,7 @@ export function generateFinalAttendanceTemplate(cohortName: string, date = new D
     '',
     '- *출석입력요청 검토 결과*',
     '  - *검토 대상:* 0건',
-    '  - *검토 결과:* -'
+    '  - *검토 결과:* 이상 없음'
   ].join('\n');
 }
 
@@ -62,18 +62,24 @@ export function generateMorningAttendanceReport(summary: AttendanceSummary): str
 
 export function generateAfternoonAttendanceReport(summary: AttendanceSummary): string {
   const zepConnectionCount = Math.max(summary.totalCount - summary.qrMissingCount, 0);
+  const afternoonAbsentPeople = getUniquePeople([...summary.absentPeople, ...summary.missingEntryPeople]);
+  const afternoonAbsentDisplayPeople = removeMissingEntryNotes(afternoonAbsentPeople);
 
   return [
     `*[${summary.cohortName}] ${summary.date}일(${summary.dayOfWeek}) 오후 출결 현황 공유*`,
     `- *Zep 접속자:* ${zepConnectionCount}명`,
-    `- *외출:* ${summary.outingCount}명${formatPeopleInline(summary.outingPeople)}`,
+    `- *외출:* ${summary.outingCount}명`,
+    formatOutingLines(summary.outingPeople),
     `- *추가 휴공가:* ${summary.officialLeaveCount}명`,
-    `- *결석:* ${summary.absentCount}명${formatPeopleInline(summary.absentPeople)}`
-  ].join('\n');
+    `- *결석:* ${afternoonAbsentPeople.length}명${formatPeopleInline(afternoonAbsentDisplayPeople)}`
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export function generateFinalAttendanceReport(summary: AttendanceSummary): string {
   const finalAbsentPeople = getUniquePeople([...summary.absentPeople, ...summary.missingEntryPeople, ...summary.qrMissingPeople]);
+  const finalAbsentDisplayPeople = removeMissingEntryNotes(finalAbsentPeople);
   const finalAbsentNames = new Set(finalAbsentPeople.map((person) => person.name));
   const exceptionPeople = [...summary.latePeople, ...summary.outingPeople, ...summary.earlyLeavePeople].filter(
     (person) => !finalAbsentNames.has(person.name)
@@ -90,11 +96,11 @@ export function generateFinalAttendanceReport(summary: AttendanceSummary): strin
     formatNestedPeopleLines(exceptionPeople),
     '',
     `- *결석:* ${finalAbsentPeople.length}명`,
-    formatNestedPeopleLines(finalAbsentPeople),
+    formatNestedPeopleLines(finalAbsentDisplayPeople),
     '',
     '- *출석입력요청 검토 결과*',
-    `  - *검토 대상:* ${summary.reviewRequestCount}건`,
-    `  - *검토 결과:* ${summary.reviewResultText}`
+    '  - *검토 대상:* 0건',
+    '  - *검토 결과:* 이상 없음'
   ].join('\n');
 }
 
@@ -140,6 +146,16 @@ function formatOfficialLeaveLines(people: PersonNote[]): string {
     .join('\n');
 }
 
+function formatOutingLines(people: PersonTimeNote[]): string {
+  if (people.length === 0) {
+    return '';
+  }
+
+  return people
+    .map((person) => `  - ${person.name}${person.time ? ` ${person.time}` : ''}`)
+    .join('\n');
+}
+
 function formatPeopleLines(people: Array<PersonNote | PersonTimeNote>): string {
   if (people.length === 0) {
     return '';
@@ -179,6 +195,10 @@ function getUniquePeople(people: Array<PersonNote | PersonTimeNote>): Array<Pers
     seenNames.add(person.name);
     return true;
   });
+}
+
+function removeMissingEntryNotes(people: Array<PersonNote | PersonTimeNote>): Array<PersonNote | PersonTimeNote> {
+  return people.map((person) => (person.note === '부재중' ? { ...person, note: undefined } : person));
 }
 
 function formatReportDate(date: Date): { dateText: string; dayOfWeek: string } {
