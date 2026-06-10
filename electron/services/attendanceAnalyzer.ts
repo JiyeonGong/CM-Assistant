@@ -217,7 +217,7 @@ function getWorkbookAttendanceLayout(worksheet: ExcelJS.Worksheet): AttendanceLa
 }
 
 function getPastedAttendanceLayout(rows: string[][]): AttendanceLayout {
-  if (rows.length < 3) {
+  if (rows.length < 2) {
     throw new Error('붙여넣은 표에서 출석부 데이터를 찾지 못했습니다. 헤더를 포함해 표 전체를 복사해주세요.');
   }
 
@@ -464,13 +464,13 @@ function isExitTimeHeader(column: HeaderColumn): boolean {
 function isOutingStartHeader(column: HeaderColumn): boolean {
   const current = compactHeader(column.current);
   const combined = compactHeader(column.combined);
-  return combined.includes('외출') && (current.includes('시작') || current.includes('외출시작'));
+  return current.includes('외출시작') || (combined.includes('외출') && current.includes('시작')) || current === '시작시간';
 }
 
 function isOutingEndHeader(column: HeaderColumn): boolean {
   const current = compactHeader(column.current);
   const combined = compactHeader(column.combined);
-  return combined.includes('외출') && (current.includes('복귀') || current.includes('종료') || current.includes('외출복귀'));
+  return current.includes('외출복귀') || (combined.includes('외출') && (current.includes('복귀') || current.includes('종료'))) || current === '복귀시간';
 }
 
 function isRequestStatusHeader(column: HeaderColumn): boolean {

@@ -671,6 +671,18 @@ button:disabled {
   gap: 0;
 }
 
+.scrollable-open-todos {
+  max-height: 390px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.scrollable-completed-todos {
+  max-height: 390px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .routine-manager-panel {
   margin-top: 20px;
 }
@@ -700,6 +712,14 @@ button:disabled {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.routine-template-edit-input {
+  width: min(360px, 100%);
+}
+
+.danger-button {
+  color: #b84a3a;
 }
 
 .routine-template-item:last-child {

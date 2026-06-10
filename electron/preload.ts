@@ -20,6 +20,7 @@ const api = {
   updateRoutineTemplate: (input: UpdateRoutineTemplateInput): Promise<RoutineTemplate> => ipcRenderer.invoke('routineTemplates:update', input),
   updateRoutineTemplateEnabled: (id: string, enabled: boolean): Promise<RoutineTemplate> =>
     ipcRenderer.invoke('routineTemplates:updateEnabled', id, enabled),
+  deleteRoutineTemplate: (id: string): Promise<void> => ipcRenderer.invoke('routineTemplates:delete', id),
   getSavedQuickMessages: (): Promise<SavedQuickMessages> => ipcRenderer.invoke('quickMessages:get'),
   saveQuickMessage: (key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> =>
     ipcRenderer.invoke('quickMessages:save', key, value),

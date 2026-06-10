@@ -21,6 +21,8 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
   const [routineTemplates, setRoutineTemplates] = useState<RoutineTemplate[]>([]);
   const [routineTitle, setRoutineTitle] = useState('');
   const [routineMessage, setRoutineMessage] = useState('');
+  const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
+  const [editingRoutineTitle, setEditingRoutineTitle] = useState('');
   const [showCompletedTodos, setShowCompletedTodos] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(getTodayString());
@@ -62,14 +64,41 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
     await loadRoutineTemplates();
   }
 
-  async function handleRenameRoutineTemplate(template: RoutineTemplate): Promise<void> {
-    const title = window.prompt('루틴 제목을 수정하세요.', template.title)?.trim();
-    if (!title || title === template.title) {
+  function handleStartEditRoutineTemplate(template: RoutineTemplate): void {
+    setEditingRoutineId(template.id);
+    setEditingRoutineTitle(template.title);
+    setRoutineMessage('');
+  }
+
+  async function handleSaveRoutineTemplate(template: RoutineTemplate): Promise<void> {
+    const title = editingRoutineTitle.trim();
+    if (!title) {
+      setRoutineMessage('루틴 제목을 입력해주세요.');
+      return;
+    }
+
+    if (title === template.title) {
+      handleCancelEditRoutineTemplate();
       return;
     }
 
     await window.cmAssistant.updateRoutineTemplate({ id: template.id, title });
+    handleCancelEditRoutineTemplate();
     setRoutineMessage('루틴 제목을 수정했습니다. 오늘 이미 생성된 업무는 그대로 두고 다음 생성부터 반영됩니다.');
+    await loadRoutineTemplates();
+  }
+
+  function handleCancelEditRoutineTemplate(): void {
+    setEditingRoutineId(null);
+    setEditingRoutineTitle('');
+  }
+
+  async function handleDeleteRoutineTemplate(template: RoutineTemplate): Promise<void> {
+    await window.cmAssistant.deleteRoutineTemplate(template.id);
+    if (editingRoutineId === template.id) {
+      handleCancelEditRoutineTemplate();
+    }
+    setRoutineMessage('루틴을 삭제했습니다. 오늘 이미 생성된 업무는 그대로 두고 다음 생성부터 반영됩니다.');
     await loadRoutineTemplates();
   }
 
@@ -117,7 +146,7 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
             </div>
             <strong>{visibleTodos.length}개</strong>
           </div>
-          <div className="todo-row-list">
+          <div className="todo-row-list scrollable-open-todos">
             {visibleTodos.map((todo) => (
               <TodoCard
                 todo={todo}
@@ -142,7 +171,7 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
             </button>
           </div>
           {showCompletedTodos && (
-            <div className="todo-row-list">
+            <div className="todo-row-list scrollable-completed-todos">
               {completedTodos.map((todo) => (
                 <TodoCard
                   todo={todo}
@@ -177,14 +206,40 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
           {routineTemplates.map((template) => (
             <div className={template.enabled ? 'routine-template-item' : 'routine-template-item disabled'} key={template.id}>
               <div>
-                <strong>{template.title}</strong>
+                {editingRoutineId === template.id ? (
+                  <input
+                    className="text-input line-input routine-template-edit-input"
+                    value={editingRoutineTitle}
+                    onChange={(event) => setEditingRoutineTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        void handleSaveRoutineTemplate(template);
+                      }
+                      if (event.key === 'Escape') {
+                        handleCancelEditRoutineTemplate();
+                      }
+                    }}
+                    aria-label={`${template.title} 루틴 제목 수정`}
+                    autoFocus
+                  />
+                ) : (
+                  <strong>{template.title}</strong>
+                )}
                 <span>{template.category ?? '루틴'} · {getPriorityLabel(template.priority)} · {template.startsOn}부터</span>
               </div>
               <div className="routine-template-actions">
-                <button type="button" className="secondary-button" onClick={() => handleRenameRoutineTemplate(template)}>수정</button>
+                {editingRoutineId === template.id ? (
+                  <>
+                    <button type="button" className="primary-button" onClick={() => handleSaveRoutineTemplate(template)}>저장</button>
+                    <button type="button" className="secondary-button" onClick={handleCancelEditRoutineTemplate}>취소</button>
+                  </>
+                ) : (
+                  <button type="button" className="secondary-button" onClick={() => handleStartEditRoutineTemplate(template)}>수정</button>
+                )}
                 <button type="button" className={template.enabled ? 'secondary-button' : 'primary-button'} onClick={() => handleToggleRoutineTemplate(template)}>
                   {template.enabled ? '사용 중' : '다시 사용'}
                 </button>
+                <button type="button" className="secondary-button danger-button" onClick={() => handleDeleteRoutineTemplate(template)}>삭제</button>
               </div>
             </div>
           ))}

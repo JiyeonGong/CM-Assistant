@@ -221,6 +221,17 @@ export async function updateRoutineTemplate(input: UpdateRoutineTemplateInput): 
   return updated;
 }
 
+export async function deleteRoutineTemplate(id: string): Promise<void> {
+  const data = await readData();
+  const nextTemplates = data.routineTemplates.filter((template) => template.id !== id);
+  if (nextTemplates.length === data.routineTemplates.length) {
+    throw new Error('삭제할 루틴을 찾지 못했습니다.');
+  }
+
+  data.routineTemplates = nextTemplates;
+  await writeData(data);
+}
+
 export async function getSavedQuickMessages(): Promise<SavedQuickMessages> {
   const data = await readData();
   return data.quickMessages;

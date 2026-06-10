@@ -4,6 +4,7 @@ import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './servi
 import {
   createRoutineTemplate,
   createTodo,
+  deleteRoutineTemplate,
   deleteTodo,
   ensureTodayRoutineTodos,
   getSavedQuickMessages,
@@ -74,6 +75,7 @@ app.whenReady().then(() => {
   ipcMain.handle('routineTemplates:create', async (_event, input) => createRoutineTemplate(input));
   ipcMain.handle('routineTemplates:update', async (_event, input) => updateRoutineTemplate(input));
   ipcMain.handle('routineTemplates:updateEnabled', async (_event, id: string, enabled: boolean) => updateRoutineTemplateEnabled(id, enabled));
+  ipcMain.handle('routineTemplates:delete', async (_event, id: string) => deleteRoutineTemplate(id));
   ipcMain.handle('quickMessages:get', async () => getSavedQuickMessages());
   ipcMain.handle('quickMessages:save', async (_event, key, value: string) => saveQuickMessage(key, value));
   ipcMain.handle('notification:show', async (_event, title: string, body: string) => {
