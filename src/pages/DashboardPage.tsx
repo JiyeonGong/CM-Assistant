@@ -20,8 +20,9 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
   const todayRoutineTodos = todos.filter((todo) => todo.source === 'routine' && todo.dueDate === getTodayInputValue());
   const routineTotal = todayRoutineTodos.length;
   const routineDone = todayRoutineTodos.filter((todo) => todo.status === 'done').length;
-  const stats = getTodoStats(todos);
-  const activeTodo = todos.find((todo) => todo.status === 'in_progress');
+  const dashboardStatsTodos = todos.filter((todo) => isTodoForToday(todo) || (todo.source === 'manual' && isCompletedToday(todo)));
+  const stats = getTodoStats(dashboardStatsTodos);
+  const activeTodo = todayTodos.find((todo) => todo.status === 'in_progress');
   const nextTodo = activeTodo ?? routineTodos[0] ?? manualTodos[0];
 
   async function handleQuickAdd(event: React.FormEvent<HTMLFormElement>): Promise<void> {

@@ -54,7 +54,7 @@ export default function AttendancePage() {
 
   async function handleAnalyze(): Promise<void> {
     if (inputMode === 'file' && !filePath) {
-      setMessage({ type: 'error', text: '먼저 단위기간 출석부 엑셀 파일을 선택해주세요.' });
+      setMessage({ type: 'error', text: '먼저 오늘 출석부 엑셀 파일을 선택해주세요.' });
       return;
     }
 
@@ -158,7 +158,7 @@ export default function AttendancePage() {
               className="paste-input"
               value={pastedTableText}
               onChange={(event) => setPastedTableText(event.target.value)}
-              placeholder="엑셀에서 단위기간 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
+              placeholder="엑셀에서 오늘 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
             />
           )}
 

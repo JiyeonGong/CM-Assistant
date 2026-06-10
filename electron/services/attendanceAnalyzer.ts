@@ -16,25 +16,24 @@ interface AttendanceColumnMap {
   attendanceStatus: number;
   entryTime: number;
   exitTime: number;
-  outingStart: number;
-  outingEnd: number;
-  requestStatus: number;
-  requestAttendanceStatus: number;
-  requestReason: number;
+  outingStart?: number;
+  outingEnd?: number;
+  requestStatus?: number;
+  requestAttendanceStatus?: number;
+  requestReason?: number;
 }
 
-const DEFAULT_COLUMNS: AttendanceColumnMap = {
-  name: 2,
-  traineeStatus: 6,
-  attendanceStatus: 7,
-  entryTime: 8,
-  exitTime: 9,
-  outingStart: 10,
-  outingEnd: 11,
-  requestStatus: 12,
-  requestAttendanceStatus: 13,
-  requestReason: 14
-};
+interface AttendanceLayout {
+  startRow: number;
+  columns: AttendanceColumnMap;
+}
+
+interface HeaderColumn {
+  index: number;
+  parent: string;
+  current: string;
+  combined: string;
+}
 
 export async function analyzeAttendanceWorkbook(filePath: string, cohortName: string): Promise<AttendanceSummary> {
   if (!filePath.toLowerCase().endsWith('.xlsx')) {
@@ -49,14 +48,14 @@ export async function analyzeAttendanceWorkbook(filePath: string, cohortName: st
     throw new Error('엑셀 파일에서 시트를 찾지 못했습니다.');
   }
 
-  validateDailyAttendanceSheet(worksheet);
+  const layout = getWorkbookAttendanceLayout(worksheet);
 
   return analyzeAttendanceRows({
     cohortName,
     sourceFileName: basename(filePath),
     rowCount: worksheet.rowCount,
-    startRow: 3,
-    columns: DEFAULT_COLUMNS,
+    startRow: layout.startRow,
+    columns: layout.columns,
     getCellValue: (rowIndex, cellIndex) => worksheet.getRow(rowIndex).getCell(cellIndex).value
   });
 }
@@ -110,9 +109,13 @@ function analyzeAttendanceRows({
     const attendanceStatus = normalizeText(getCellValue(rowNumber, columns.attendanceStatus));
     const entryTime = formatExcelTime(getCellValue(rowNumber, columns.entryTime));
     const exitTime = formatExcelTime(getCellValue(rowNumber, columns.exitTime));
-    const requestStatus = normalizeText(getCellValue(rowNumber, columns.requestStatus));
-    const requestAttendanceStatus = normalizeText(getCellValue(rowNumber, columns.requestAttendanceStatus));
-    const requestReason = normalizeText(getCellValue(rowNumber, columns.requestReason));
+    const outingTime = formatTimeRange(
+      getOptionalCellValue(getCellValue, rowNumber, columns.outingStart),
+      getOptionalCellValue(getCellValue, rowNumber, columns.outingEnd)
+    );
+    const requestStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestStatus));
+    const requestAttendanceStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestAttendanceStatus));
+    const requestReason = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestReason));
     const isApprovedOfficialLeaveRequest = requestStatus.includes('신청') && isOfficialLeaveStatus(requestAttendanceStatus);
     const officialLeaveNote = isApprovedOfficialLeaveRequest
       ? formatOfficialLeaveRequestNote(requestAttendanceStatus, requestReason)
@@ -145,10 +148,10 @@ function analyzeAttendanceRows({
       latePeople.push({ name, time: entryTime, note: '지각' });
     }
 
-    if (!isAbsent && !isOfficialLeave && attendanceStatus === '외출') {
+    if (!isAbsent && !isOfficialLeave && (attendanceStatus === '외출' || Boolean(outingTime))) {
       outingPeople.push({
         name,
-        time: formatTimeRange(getCellValue(rowNumber, columns.outingStart), getCellValue(rowNumber, columns.outingEnd)),
+        time: outingTime,
         note: '외출'
       });
     }
@@ -204,70 +207,150 @@ function analyzeAttendanceRows({
   };
 }
 
-function validateDailyAttendanceSheet(worksheet: ExcelJS.Worksheet): void {
-  const requiredHeaders = ['성명'];
-  const headerText = Array.from({ length: Math.min(10, worksheet.rowCount) }, (_value, index) => index + 1)
-    .flatMap((rowNumber) => {
-      const values: string[] = [];
-      worksheet.getRow(rowNumber).eachCell({ includeEmpty: false }, (cell) => {
-        values.push(normalizeText(cell.value));
-      });
-      return values;
-    })
-    .join(' ');
-  const compactHeaderText = removeWhitespace(headerText);
-
-  const missingHeaders = requiredHeaders.filter((header) => !compactHeaderText.includes(removeWhitespace(header)));
-  if (missingHeaders.length > 0) {
-    throw new Error(`단위기간 출석부 필수 헤더를 찾지 못했습니다: ${missingHeaders.join(', ')}`);
-  }
+function getWorkbookAttendanceLayout(worksheet: ExcelJS.Worksheet): AttendanceLayout {
+  return getAttendanceLayout({
+    rowCount: worksheet.rowCount,
+    maxColumnCount: worksheet.columnCount,
+    sourceLabel: '엑셀 파일',
+    getCellValue: (rowIndex, cellIndex) => worksheet.getRow(rowIndex).getCell(cellIndex).value
+  });
 }
 
-function getPastedAttendanceLayout(rows: string[][]): { startRow: number; columns: AttendanceColumnMap } {
+function getPastedAttendanceLayout(rows: string[][]): AttendanceLayout {
   if (rows.length < 3) {
     throw new Error('붙여넣은 표에서 출석부 데이터를 찾지 못했습니다. 헤더를 포함해 표 전체를 복사해주세요.');
   }
 
-  const headerRowIndex = rows.findIndex((row) => {
-    const normalizedCells = row.map(normalizeText);
-    return normalizedCells.some((cell) => cell.includes('성명')) && normalizedCells.some((cell) => cell.includes('출결상태'));
+  return getAttendanceLayout({
+    rowCount: rows.length,
+    maxColumnCount: Math.max(...rows.map((row) => row.length)),
+    sourceLabel: '붙여넣은 표',
+    getCellValue: (rowIndex, cellIndex) => rows[rowIndex - 1]?.[cellIndex - 1]
   });
+}
 
-  if (headerRowIndex === -1) {
-    throw new Error('붙여넣은 표에서 성명/출결상태 헤더를 찾지 못했습니다. 오늘 HRD 출석부 전체를 복사했는지 확인해주세요.');
+function getAttendanceLayout({
+  rowCount,
+  maxColumnCount,
+  sourceLabel,
+  getCellValue
+}: {
+  rowCount: number;
+  maxColumnCount: number;
+  sourceLabel: string;
+  getCellValue: AttendanceRowReader;
+}): AttendanceLayout {
+  const headerRow = findAttendanceHeaderRow(rowCount, maxColumnCount, getCellValue);
+  if (!headerRow) {
+    throw new Error(`${sourceLabel}에서 성명/출결상태 헤더를 찾지 못했습니다. 오늘 HRD 출석부 전체를 사용했는지 확인해주세요.`);
   }
 
-  const headerRow = rows[headerRowIndex].map(normalizeText);
-  const nameColumn = headerRow.findIndex((cell) => cell.includes('성명')) + 1;
+  const columns = getAttendanceColumns(headerRow.columns, sourceLabel);
+  const startRow = findAttendanceStartRow(rowCount, headerRow.rowNumber, columns, getCellValue);
 
-  if (nameColumn <= 0) {
-    throw new Error('붙여넣은 표에서 성명 열을 찾지 못했습니다.');
+  return { startRow, columns };
+}
+
+function findAttendanceHeaderRow(
+  rowCount: number,
+  maxColumnCount: number,
+  getCellValue: AttendanceRowReader
+): { rowNumber: number; columns: HeaderColumn[] } | null {
+  let bestHeader: { rowNumber: number; columns: HeaderColumn[]; score: number } | null = null;
+
+  for (let rowNumber = 1; rowNumber <= Math.min(10, rowCount); rowNumber += 1) {
+    const columns = getHeaderColumns(rowNumber, maxColumnCount, getCellValue);
+    const score = scoreHeaderColumns(columns);
+    if (score >= (bestHeader?.score ?? 0)) {
+      bestHeader = { rowNumber, columns, score };
+    }
   }
 
+  return bestHeader && bestHeader.score >= 4
+    ? { rowNumber: bestHeader.rowNumber, columns: bestHeader.columns }
+    : null;
+}
+
+function getHeaderColumns(rowNumber: number, maxColumnCount: number, getCellValue: AttendanceRowReader): HeaderColumn[] {
+  return Array.from({ length: maxColumnCount }, (_value, index) => {
+    const columnIndex = index + 1;
+    const parent = normalizeText(rowNumber > 1 ? getCellValue(rowNumber - 1, columnIndex) : '');
+    const current = normalizeText(getCellValue(rowNumber, columnIndex));
+    return {
+      index: columnIndex,
+      parent,
+      current,
+      combined: [parent, current].filter(Boolean).join(' ')
+    };
+  });
+}
+
+function scoreHeaderColumns(columns: HeaderColumn[]): number {
+  return [
+    findColumn(columns, isNameHeader),
+    findColumn(columns, isTraineeStatusHeader),
+    findColumn(columns, isAttendanceStatusHeader),
+    findColumn(columns, isEntryTimeHeader),
+    findColumn(columns, isExitTimeHeader),
+    findColumn(columns, isRequestStatusHeader),
+    findColumn(columns, isRequestAttendanceStatusHeader),
+    findColumn(columns, isRequestReasonHeader)
+  ].filter(Boolean).length;
+}
+
+function getAttendanceColumns(headerColumns: HeaderColumn[], sourceLabel: string): AttendanceColumnMap {
   const columns: AttendanceColumnMap = {
-    name: nameColumn,
-    traineeStatus: nameColumn + 4,
-    attendanceStatus: nameColumn + 5,
-    entryTime: nameColumn + 6,
-    exitTime: nameColumn + 7,
-    outingStart: nameColumn + 8,
-    outingEnd: nameColumn + 9,
-    requestStatus: nameColumn + 10,
-    requestAttendanceStatus: nameColumn + 11,
-    requestReason: nameColumn + 12
+    name: requireColumn(headerColumns, isNameHeader, sourceLabel, '성명'),
+    traineeStatus: requireColumn(headerColumns, isTraineeStatusHeader, sourceLabel, '훈련생 상태'),
+    attendanceStatus: requireColumn(headerColumns, isAttendanceStatusHeader, sourceLabel, '출결상태'),
+    entryTime: requireColumn(headerColumns, isEntryTimeHeader, sourceLabel, '입실 시간'),
+    exitTime: requireColumn(headerColumns, isExitTimeHeader, sourceLabel, '퇴실 시간'),
+    outingStart: findColumn(headerColumns, isOutingStartHeader),
+    outingEnd: findColumn(headerColumns, isOutingEndHeader),
+    requestStatus: findColumn(headerColumns, isRequestStatusHeader),
+    requestAttendanceStatus: findColumn(headerColumns, isRequestAttendanceStatusHeader),
+    requestReason: findColumn(headerColumns, isRequestReasonHeader)
   };
 
-  const startRowIndex = rows.findIndex((row, index) => {
-    if (index <= headerRowIndex) return false;
-    const name = normalizeText(row[columns.name - 1]);
-    const traineeStatus = normalizeText(row[columns.traineeStatus - 1]);
-    return Boolean(name) && (traineeStatus === ACTIVE_TRAINEE_STATUS || traineeStatus === '중도탈락');
-  });
+  return columns;
+}
 
-  return {
-    startRow: startRowIndex === -1 ? headerRowIndex + 3 : startRowIndex + 1,
-    columns
-  };
+function requireColumn(
+  columns: HeaderColumn[],
+  predicate: (column: HeaderColumn) => boolean,
+  sourceLabel: string,
+  label: string
+): number {
+  const columnIndex = findColumn(columns, predicate);
+  if (!columnIndex) {
+    throw new Error(`${sourceLabel}에서 ${label} 열을 찾지 못했습니다. HRD 출석부의 헤더를 포함해 다시 시도해주세요.`);
+  }
+  return columnIndex;
+}
+
+function findColumn(columns: HeaderColumn[], predicate: (column: HeaderColumn) => boolean): number | undefined {
+  return columns.find(predicate)?.index;
+}
+
+function findAttendanceStartRow(
+  rowCount: number,
+  headerRowNumber: number,
+  columns: AttendanceColumnMap,
+  getCellValue: AttendanceRowReader
+): number {
+  for (let rowNumber = headerRowNumber + 1; rowNumber <= rowCount; rowNumber += 1) {
+    const name = normalizeText(getCellValue(rowNumber, columns.name));
+    const traineeStatus = normalizeText(getCellValue(rowNumber, columns.traineeStatus));
+    if (name && traineeStatus === ACTIVE_TRAINEE_STATUS) {
+      return rowNumber;
+    }
+  }
+
+  return headerRowNumber + 1;
+}
+
+function getOptionalCellValue(getCellValue: AttendanceRowReader, rowNumber: number, cellIndex: number | undefined): unknown {
+  return cellIndex ? getCellValue(rowNumber, cellIndex) : undefined;
 }
 
 function parsePastedTable(pastedText: string): string[][] {
@@ -344,6 +427,62 @@ function normalizeText(value: unknown): string {
 
 function removeWhitespace(value: string): string {
   return value.replace(/\s+/g, '');
+}
+
+function compactHeader(value: string): string {
+  return removeWhitespace(value).toLowerCase();
+}
+
+function isRequestHeader(column: HeaderColumn): boolean {
+  return compactHeader(column.parent).includes('출석입력요청') || compactHeader(column.current).includes('출석입력요청');
+}
+
+function isNameHeader(column: HeaderColumn): boolean {
+  return compactHeader(column.current).includes('성명') || compactHeader(column.current).includes('이름');
+}
+
+function isTraineeStatusHeader(column: HeaderColumn): boolean {
+  const current = compactHeader(column.current);
+  const combined = compactHeader(column.combined);
+  return !isRequestHeader(column) && (current === '상태' || combined.includes('훈련생상태') || combined.includes('수강생상태'));
+}
+
+function isAttendanceStatusHeader(column: HeaderColumn): boolean {
+  return !isRequestHeader(column) && compactHeader(column.current).includes('출결상태');
+}
+
+function isEntryTimeHeader(column: HeaderColumn): boolean {
+  const current = compactHeader(column.current);
+  return current.includes('입실') || current.includes('입실시간') || current.includes('입실시각');
+}
+
+function isExitTimeHeader(column: HeaderColumn): boolean {
+  const current = compactHeader(column.current);
+  return current.includes('퇴실') || current.includes('퇴실시간') || current.includes('퇴실시각');
+}
+
+function isOutingStartHeader(column: HeaderColumn): boolean {
+  const current = compactHeader(column.current);
+  const combined = compactHeader(column.combined);
+  return combined.includes('외출') && (current.includes('시작') || current.includes('외출시작'));
+}
+
+function isOutingEndHeader(column: HeaderColumn): boolean {
+  const current = compactHeader(column.current);
+  const combined = compactHeader(column.combined);
+  return combined.includes('외출') && (current.includes('복귀') || current.includes('종료') || current.includes('외출복귀'));
+}
+
+function isRequestStatusHeader(column: HeaderColumn): boolean {
+  return isRequestHeader(column) && compactHeader(column.current).includes('처리상태');
+}
+
+function isRequestAttendanceStatusHeader(column: HeaderColumn): boolean {
+  return isRequestHeader(column) && compactHeader(column.current).includes('출결상태');
+}
+
+function isRequestReasonHeader(column: HeaderColumn): boolean {
+  return isRequestHeader(column) && compactHeader(column.current).includes('사유');
 }
 
 function isOfficialLeaveStatus(status: string): boolean {
