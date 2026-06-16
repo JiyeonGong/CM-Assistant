@@ -154,12 +154,19 @@ export default function AttendancePage() {
               </div>
             </div>
           ) : (
-            <textarea
-              className="paste-input"
-              value={pastedTableText}
-              onChange={(event) => setPastedTableText(event.target.value)}
-              placeholder="엑셀에서 오늘 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
-            />
+            <div className="paste-input-wrap">
+              {pastedTableText && (
+                <button type="button" className="paste-clear-button" aria-label="붙여넣은 표 비우기" onClick={() => setPastedTableText('')}>
+                  ×
+                </button>
+              )}
+              <textarea
+                className="paste-input"
+                value={pastedTableText}
+                onChange={(event) => setPastedTableText(event.target.value)}
+                placeholder="엑셀에서 오늘 출석부 표 전체를 복사한 뒤 여기에 붙여넣어 주세요."
+              />
+            </div>
           )}
 
           <button type="button" className="accent-button" onClick={handleAnalyze} disabled={isAnalyzing}>{isAnalyzing ? '분석 중...' : '분석하기'}</button>

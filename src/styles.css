@@ -287,17 +287,45 @@ button:disabled {
   color: #fff;
 }
 
-.paste-input {
+.paste-input-wrap {
   grid-column: 1 / -1;
+  position: relative;
+}
+
+.paste-input {
   width: 100%;
   min-height: 160px;
-  padding: 14px;
+  padding: 14px 44px 14px 14px;
   border: 1px solid var(--line);
   border-radius: 18px;
   resize: vertical;
   background: #fff;
   color: var(--ink);
   line-height: 1.45;
+}
+
+.paste-clear-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.paste-clear-button:hover,
+.paste-clear-button:focus-visible {
+  background: var(--ink);
+  color: #fff;
 }
 
 .file-info {

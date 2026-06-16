@@ -18,6 +18,7 @@ interface AttendanceColumnMap {
   exitTime: number;
   outingStart?: number;
   outingEnd?: number;
+  outingTime?: number;
   requestStatus?: number;
   requestAttendanceStatus?: number;
   requestReason?: number;
@@ -109,10 +110,7 @@ function analyzeAttendanceRows({
     const attendanceStatus = normalizeText(getCellValue(rowNumber, columns.attendanceStatus));
     const entryTime = formatExcelTime(getCellValue(rowNumber, columns.entryTime));
     const exitTime = formatExcelTime(getCellValue(rowNumber, columns.exitTime));
-    const outingTime = formatTimeRange(
-      getOptionalCellValue(getCellValue, rowNumber, columns.outingStart),
-      getOptionalCellValue(getCellValue, rowNumber, columns.outingEnd)
-    );
+    const outingTime = formatOutingTime(getCellValue, rowNumber, columns);
     const requestStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestStatus));
     const requestAttendanceStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestAttendanceStatus));
     const requestReason = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestReason));
@@ -307,6 +305,7 @@ function getAttendanceColumns(headerColumns: HeaderColumn[], sourceLabel: string
     exitTime: requireColumn(headerColumns, isExitTimeHeader, sourceLabel, '퇴실 시간'),
     outingStart: findColumn(headerColumns, isOutingStartHeader),
     outingEnd: findColumn(headerColumns, isOutingEndHeader),
+    outingTime: findColumn(headerColumns, isOutingTimeHeader),
     requestStatus: findColumn(headerColumns, isRequestStatusHeader),
     requestAttendanceStatus: findColumn(headerColumns, isRequestAttendanceStatusHeader),
     requestReason: findColumn(headerColumns, isRequestReasonHeader)
@@ -473,6 +472,12 @@ function isOutingEndHeader(column: HeaderColumn): boolean {
   return current.includes('외출복귀') || (combined.includes('외출') && (current.includes('복귀') || current.includes('종료'))) || current === '복귀시간';
 }
 
+function isOutingTimeHeader(column: HeaderColumn): boolean {
+  const current = compactHeader(column.current);
+  const combined = compactHeader(column.combined);
+  return current === '외출' || current.includes('외출시간') || current.includes('외출시각') || combined.includes('외출시간') || combined.includes('외출시각');
+}
+
 function isRequestStatusHeader(column: HeaderColumn): boolean {
   return isRequestHeader(column) && compactHeader(column.current).includes('처리상태');
 }
@@ -510,6 +515,33 @@ function formatTimeRange(startValue: unknown, endValue: unknown): string | undef
   }
 
   return start || end;
+}
+
+function formatOutingTime(getCellValue: AttendanceRowReader, rowNumber: number, columns: AttendanceColumnMap): string | undefined {
+  const rangeFromColumns = formatTimeRange(
+    getOptionalCellValue(getCellValue, rowNumber, columns.outingStart),
+    getOptionalCellValue(getCellValue, rowNumber, columns.outingEnd)
+  );
+  if (rangeFromColumns) {
+    return rangeFromColumns;
+  }
+
+  return formatExcelTimeRange(getOptionalCellValue(getCellValue, rowNumber, columns.outingTime));
+}
+
+function formatExcelTimeRange(value: unknown): string | undefined {
+  const normalized = normalizeText(value);
+  const rangeMatch = normalized.match(/(\d{1,2}:\d{2})\s*(?:~|-|–|—|부터|에서)\s*(\d{1,2}:\d{2})/);
+  if (rangeMatch) {
+    return `${normalizeTimeText(rangeMatch[1])}~${normalizeTimeText(rangeMatch[2])}`;
+  }
+
+  return formatExcelTime(value);
+}
+
+function normalizeTimeText(value: string): string {
+  const [hours, minutes] = value.split(':');
+  return `${hours.padStart(2, '0')}:${minutes}`;
 }
 
 function formatExcelTime(value: unknown): string | undefined {
