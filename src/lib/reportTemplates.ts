@@ -19,8 +19,7 @@ export function generateAfternoonAttendanceTemplate(cohortName: string, date = n
     `*[${cohortName}] ${dateText}일(${dayOfWeek}) 오후 출결 현황 공유*`,
     '- *Zep 접속자:* 0명',
     '- *외출:* 0명',
-    '- *추가 휴공가:* 0명',
-    '- *결석:* 0명'
+    '- *추가 휴공가:* 0명'
   ].join('\n');
 }
 
@@ -43,9 +42,7 @@ export function generateFinalAttendanceTemplate(cohortName: string, date = new D
 
 export function generateMorningAttendanceReport(summary: AttendanceSummary): string {
   const lateOrMissingPeople = [...summary.missingEntryPeople, ...summary.latePeople];
-  const missingEntryNames = new Set(summary.missingEntryPeople.map((person) => person.name));
-  const morningAbsentPeople = summary.absentPeople.filter((person) => !missingEntryNames.has(person.name));
-  const morningPresentCount = Math.max(summary.totalCount - lateOrMissingPeople.length - morningAbsentPeople.length, 0);
+  const morningPresentCount = Math.max(summary.totalCount - lateOrMissingPeople.length, 0);
 
   return [
     `*[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 오전 출결 현황 공유*`,
@@ -54,7 +51,7 @@ export function generateMorningAttendanceReport(summary: AttendanceSummary): str
     formatNestedPeopleLines(lateOrMissingPeople),
     `- *휴공가:* ${summary.officialLeaveCount}명`,
     formatOfficialLeaveLines(summary.officialLeavePeople),
-    `- *결석:* ${morningAbsentPeople.length}명${formatPeopleInline(morningAbsentPeople)}`
+    '- *결석:* 0명'
   ]
     .filter(Boolean)
     .join('\n');
@@ -62,16 +59,13 @@ export function generateMorningAttendanceReport(summary: AttendanceSummary): str
 
 export function generateAfternoonAttendanceReport(summary: AttendanceSummary): string {
   const zepConnectionCount = Math.max(summary.totalCount - summary.qrMissingCount, 0);
-  const afternoonAbsentPeople = getUniquePeople([...summary.absentPeople, ...summary.missingEntryPeople]);
-  const afternoonAbsentDisplayPeople = removeMissingEntryNotes(afternoonAbsentPeople);
 
   return [
     `*[${summary.cohortName}] ${summary.date}일(${summary.dayOfWeek}) 오후 출결 현황 공유*`,
     `- *Zep 접속자:* ${zepConnectionCount}명`,
     `- *외출:* ${summary.outingCount}명`,
     formatOutingLines(summary.outingPeople),
-    `- *추가 휴공가:* ${summary.officialLeaveCount}명`,
-    `- *결석:* ${afternoonAbsentPeople.length}명${formatPeopleInline(afternoonAbsentDisplayPeople)}`
+    `- *추가 휴공가:* ${summary.officialLeaveCount}명`
   ]
     .filter(Boolean)
     .join('\n');
