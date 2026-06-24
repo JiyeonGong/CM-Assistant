@@ -4,7 +4,7 @@ export interface QuickMessageTemplate {
   category: string;
   description: string;
   template: string;
-  generator?: 'spotCheckNotice' | 'spotCheckFollowUp' | 'spotCheckResult' | 'logComparison';
+  generator?: 'spotCheckNotice' | 'spotCheckFollowUp' | 'spotCheckResult' | 'logComparison' | 'logComparisonResult';
   savedKey?: 'morningGreeting' | 'eveningGreeting' | 'instructorAttendanceShare' | 'instructorMorningAttendanceShare' | 'instructorAfternoonAttendanceShare';
   copyMode?: 'plainText' | 'richText';
   refreshable?: boolean;

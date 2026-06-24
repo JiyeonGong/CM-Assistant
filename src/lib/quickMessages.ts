@@ -30,10 +30,18 @@ export const QUICK_MESSAGE_TEMPLATES: QuickMessageTemplate[] = [
   {
     id: 'log-comparison',
     title: '로그 대조 결과 안내',
-    category: '로그 대조 결과 안내',
+    category: '로그 대조',
     description: 'HRD/Zep 로그 대조 후 불일치 또는 정상 출석으로 출결 변경시 안내합니다.',
     generator: 'logComparison',
     template: ''
+  },
+  {
+    id: 'log-comparison-result',
+    title: '로그 대조 결과',
+    category: '로그 대조',
+    description: '오늘 날짜 기준 로그기록 대조 결과 공유 문구입니다.',
+    generator: 'logComparisonResult',
+    template: generateLogComparisonResultMessage()
   },
   {
     id: 'unit-period-close',
@@ -144,6 +152,13 @@ export function generateSpotCheckResultMessage(date = new Date()): string {
 
   return `*[0기] ${reportDate} n교시 불시점검 공유* (@행정지원매니저 태그)
 - 점검 결과: 특이사항 00명`;
+}
+
+export function generateLogComparisonResultMessage(date = new Date(), cohortName = '과정명_n기'): string {
+  const reportDate = `${date.getMonth() + 1}/${date.getDate()}(${formatDayOfWeek(date)})`;
+  const displayCohortName = cohortName.trim() || '과정명_n기';
+
+  return `[${displayCohortName}] ${reportDate} 로그기록 대조 결과 공유 (@행정지원매니저)`;
 }
 
 function addMinutes(date: Date, minutes: number): Date {
