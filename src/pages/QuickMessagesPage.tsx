@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   generateSpotCheckFollowUpMessage,
+  generateLogComparisonResultMessage,
   generateSpotCheckNoticeMessage,
   generateSpotCheckNoticeMessages,
   generateSpotCheckResultMessage,
@@ -10,8 +11,9 @@ import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
 import type { SavedQuickMessages } from '../types/appData';
 import type { QuickMessageTemplate } from '../types/quickMessage';
 
-const MESSAGE_CATEGORIES = ['불시점검', '로그 대조 결과 안내', '강사 공유', '인사', '단위기간 종료'];
+const MESSAGE_CATEGORIES = ['불시점검', '로그 대조', '강사 공유', '인사', '단위기간 종료'];
 const LOG_ATTENDANCE_TYPES = ['출석', '지각', '외출', '조퇴', '100분의50미만', '지각&외출', '외출&조퇴', '지각&조퇴', '외출&지각&조퇴'];
+const COHORT_COURSES = ['DA', 'FS', 'FESI', 'SB', 'PD', 'AI', 'IF'];
 
 type ToastType = 'success' | 'error' | 'warning';
 
@@ -42,6 +44,10 @@ export default function QuickMessagesPage() {
   const [logDate, setLogDate] = useState(getDateInputValue());
   const [logHrdTime, setLogHrdTime] = useState('');
   const [logZepTime, setLogZepTime] = useState('');
+  const [logResultCourse, setLogResultCourse] = useState(COHORT_COURSES[4]);
+  const [logResultCohortNumber, setLogResultCohortNumber] = useState('');
+  const [logComparisonDraft, setLogComparisonDraft] = useState('');
+  const [logComparisonResultDraft, setLogComparisonResultDraft] = useState('');
 
   useEffect(() => {
     void loadSavedQuickMessages();
@@ -218,12 +224,13 @@ export default function QuickMessagesPage() {
       return;
     }
 
-    window.cmAssistant.copyText(logComparisonMessage);
+    window.cmAssistant.copyText(logComparisonDraft);
     showToast('로그 대조 안내 문구가 복사되었습니다.', 'success');
   }
 
   const isSpotCheckNoticeTemplate = selectedTemplate?.generator === 'spotCheckNotice';
   const isLogComparisonTemplate = selectedTemplate?.generator === 'logComparison';
+  const isLogComparisonResultTemplate = selectedTemplate?.generator === 'logComparisonResult';
   const remainingSpotCheckSeconds = spotCheckTimerEndAt ? Math.max(0, Math.ceil((spotCheckTimerEndAt - spotCheckTimerNow) / 1000)) : 0;
   const shouldShowLogTimeInputs = logAfterAttendanceType !== '출석';
   const logComparisonMessage = generateLogComparisonMessage({
@@ -235,6 +242,15 @@ export default function QuickMessagesPage() {
     zepTime: logZepTime
   });
   const logTimeFieldLabels = getLogTimeFieldLabels(logAfterAttendanceType);
+  const logComparisonResultMessage = generateLogComparisonResultMessage(new Date(), formatCohortName(logResultCourse, logResultCohortNumber));
+
+  useEffect(() => {
+    setLogComparisonDraft(logComparisonMessage);
+  }, [logComparisonMessage]);
+
+  useEffect(() => {
+    setLogComparisonResultDraft(logComparisonResultMessage);
+  }, [logComparisonResultMessage]);
 
   return (
     <>
@@ -406,7 +422,7 @@ export default function QuickMessagesPage() {
                   <p className="form-hint">시간은 09:05 또는 905처럼 입력해주세요. 입력값은 안내 문구에 자동 반영됩니다.</p>
                 </>
               )}
-              <textarea className="report-output compact-output" value={logComparisonMessage} readOnly />
+              <textarea className="report-output compact-output" value={logComparisonDraft} onChange={(event) => setLogComparisonDraft(event.target.value)} />
               <button type="button" className="copy-button" onClick={handleCopyLogComparisonMessage}>안내 문구 복사</button>
             </section>
           ) : selectedTemplate?.generator === 'spotCheckNotice' ? (
@@ -434,6 +450,29 @@ export default function QuickMessagesPage() {
                 </div>
               </div>
             </div>
+          ) : isLogComparisonResultTemplate ? (
+            <section className="log-comparison-panel">
+              <div className="log-time-grid">
+                <label className="field-stack">
+                  <span>과정</span>
+                  <select className="text-input" value={logResultCourse} onChange={(event) => setLogResultCourse(event.target.value)}>
+                    {COHORT_COURSES.map((course) => <option value={course} key={course}>{course}</option>)}
+                  </select>
+                </label>
+                <label className="field-stack">
+                  <span>기수</span>
+                  <input
+                    className="text-input"
+                    value={logResultCohortNumber}
+                    onChange={(event) => setLogResultCohortNumber(event.target.value.replace(/\D/g, ''))}
+                    placeholder="예: 8"
+                    inputMode="numeric"
+                  />
+                </label>
+              </div>
+              <textarea className="report-output compact-output" value={logComparisonResultDraft} onChange={(event) => setLogComparisonResultDraft(event.target.value)} />
+              <button type="button" className="copy-button" onClick={() => handleCopyText(logComparisonResultDraft, '로그 대조 결과')}>복사하기</button>
+            </section>
           ) : (
             <>
               <textarea
@@ -479,7 +518,16 @@ function getGeneratedMessage(generator: NonNullable<QuickMessageTemplate['genera
     return '';
   }
 
+  if (generator === 'logComparisonResult') {
+    return generateLogComparisonResultMessage();
+  }
+
   return generateSpotCheckResultMessage();
+}
+
+function formatCohortName(course: string, cohortNumber: string): string {
+  const normalizedCohortNumber = cohortNumber.trim();
+  return normalizedCohortNumber ? `${course}_${normalizedCohortNumber}기` : `${course}_n기`;
 }
 
 function getRefreshButtonLabel(generator: NonNullable<QuickMessageTemplate['generator']>): string {
@@ -517,7 +565,7 @@ function getCategoryRailLabel(category: string): string {
       return '전체';
     case '불시점검':
       return '불시점검';
-    case '로그 대조 결과 안내':
+    case '로그 대조':
       return '로그';
     case '강사 공유':
       return '강사';
@@ -595,7 +643,7 @@ function getLogTimeFieldLabels(attendanceType: string): { first: string; second:
     return { first: 'HRD 입실 QR 스캔 시각', second: 'Zep 접속시각' };
   }
 
-  return { first: 'HRD 퇴실 QR 스캔 시각', second: 'Zep 접속시각' };
+  return { first: 'HRD 퇴실 QR 스캔 시각', second: getLogZepTimeLabel(attendanceType) };
 }
 
 function getLogComparisonChangeReason(attendanceType: string, firstTime: string, secondTime: string): string {
@@ -604,7 +652,11 @@ function getLogComparisonChangeReason(attendanceType: string, firstTime: string,
   }
 
   const firstLabel = attendanceType === '지각' ? 'HRD 입실 QR 스캔 시각' : 'HRD 퇴실 QR 스캔 시각';
-  return `${firstLabel} ${firstTime} / ZEP 접속시각 ${secondTime}`;
+  return `${firstLabel} ${firstTime} / ${getLogZepTimeLabel(attendanceType)} ${secondTime}`;
+}
+
+function getLogZepTimeLabel(attendanceType: string): string {
+  return attendanceType.includes('조퇴') || attendanceType.includes('100분의50미만') ? 'Zep 퇴실 시각' : 'Zep 접속시각';
 }
 
 function formatRemainingTime(seconds: number): string {

@@ -14,16 +14,16 @@ interface DashboardPageProps {
 export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTodo, onNavigateTodo }: DashboardPageProps) {
   const [quickTitle, setQuickTitle] = useState('');
   const todayTodos = todos.filter((todo) => isTodoForToday(todo));
-  const routineTodos = todayTodos.filter((todo) => todo.source === 'routine' && todo.status !== 'done');
-  const manualTodos = todayTodos.filter((todo) => todo.source === 'manual' && todo.status !== 'done');
+  const routineTodos = todayTodos.filter((todo) => todo.source === 'routine' && todo.status !== 'done' && todo.status !== 'in_progress');
+  const manualTodos = todayTodos.filter((todo) => todo.source === 'manual' && todo.status !== 'done' && todo.status !== 'in_progress');
   const completedToday = todos.filter((todo) => isCompletedToday(todo));
   const todayRoutineTodos = todos.filter((todo) => todo.source === 'routine' && todo.dueDate === getTodayInputValue());
   const routineTotal = todayRoutineTodos.length;
   const routineDone = todayRoutineTodos.filter((todo) => todo.status === 'done').length;
   const dashboardStatsTodos = todos.filter((todo) => isTodoForToday(todo) || (todo.source === 'manual' && isCompletedToday(todo)));
   const stats = getTodoStats(dashboardStatsTodos);
-  const activeTodo = todayTodos.find((todo) => todo.status === 'in_progress');
-  const nextTodo = activeTodo ?? routineTodos[0] ?? manualTodos[0];
+  const activeTodos = todayTodos.filter((todo) => todo.status === 'in_progress');
+  const nextTodo = activeTodos[0] ?? routineTodos[0] ?? manualTodos[0];
 
   async function handleQuickAdd(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -71,7 +71,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
             <h2>오늘 루틴</h2>
             <p>순서대로 확인하면 오늘 출결 운영이 정리됩니다.</p>
           </div>
-          <TodoPreviewList todos={routineTodos} emptyText="남은 루틴이 없습니다." mode="routine" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={routineTodos} emptyText="남은 루틴이 없습니다." mode="routine" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
@@ -80,7 +80,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
             <h2>추가 업무</h2>
             <p>오늘 처리할 비정기 업무만 모아봅니다.</p>
           </div>
-          <TodoPreviewList todos={manualTodos} emptyText="추가 업무가 없습니다." mode="manual" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={manualTodos} emptyText="추가 업무가 없습니다." mode="manual" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
@@ -89,7 +89,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
             <h2>진행 중</h2>
             <p>지금 집중할 업무입니다.</p>
           </div>
-          {activeTodo ? <TodoPreviewItem todo={activeTodo} mode="active" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} /> : <div className="empty-state small">진행 중인 업무가 없습니다.</div>}
+          <TodoPreviewList todos={activeTodos} emptyText="진행 중인 업무가 없습니다." mode="active" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
@@ -98,7 +98,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
             <h2>오늘 완료</h2>
             <p>오늘 체크한 업무 기록입니다.</p>
           </div>
-          <TodoPreviewList todos={completedToday} emptyText="오늘 완료한 업무가 없습니다." mode="readonly" onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={completedToday} emptyText="오늘 완료한 업무가 없습니다." mode="readonly" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel dashboard-wide-panel">
@@ -126,13 +126,13 @@ interface TodoPreviewActions {
   onDeleteTodo: (id: string) => Promise<void>;
 }
 
-function TodoPreviewList({ todos, emptyText, mode, onUpdateTodo, onDeleteTodo }: { todos: TodoItem[]; emptyText: string; mode: TodoPreviewMode } & TodoPreviewActions) {
+function TodoPreviewList({ todos, emptyText, mode, scrollable = false, onUpdateTodo, onDeleteTodo }: { todos: TodoItem[]; emptyText: string; mode: TodoPreviewMode; scrollable?: boolean } & TodoPreviewActions) {
   if (todos.length === 0) {
     return <div className="empty-state small">{emptyText}</div>;
   }
 
   return (
-    <div className="todo-preview-list">
+    <div className={`todo-preview-list${scrollable ? ' dashboard-scroll-list' : ''}`}>
       {todos.map((todo) => <TodoPreviewItem todo={todo} mode={mode} onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} key={todo.id} />)}
     </div>
   );

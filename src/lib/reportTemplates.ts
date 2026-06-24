@@ -65,7 +65,7 @@ export function generateAfternoonAttendanceReport(summary: AttendanceSummary): s
     `- *Zep 접속자:* ${zepConnectionCount}명`,
     `- *외출:* ${summary.outingCount}명`,
     formatOutingLines(summary.outingPeople),
-    `- *추가 휴공가:* ${summary.officialLeaveCount}명`
+    '- *추가 휴공가:* 0명'
   ]
     .filter(Boolean)
     .join('\n');

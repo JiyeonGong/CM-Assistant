@@ -637,6 +637,12 @@ button:disabled {
   gap: 10px;
 }
 
+.dashboard-scroll-list {
+  max-height: 330px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .todo-preview-item {
   display: flex;
   gap: 10px;

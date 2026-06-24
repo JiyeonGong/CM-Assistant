@@ -111,16 +111,21 @@ function analyzeAttendanceRows({
     const entryTime = formatExcelTime(getCellValue(rowNumber, columns.entryTime));
     const exitTime = formatExcelTime(getCellValue(rowNumber, columns.exitTime));
     const outingTime = formatOutingTime(getCellValue, rowNumber, columns);
-    const requestStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestStatus));
-    const requestAttendanceStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestAttendanceStatus));
-    const requestReason = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestReason));
-    const isApprovedOfficialLeaveRequest = requestStatus.includes('신청') && isOfficialLeaveStatus(requestAttendanceStatus);
+    const mappedRequestStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestStatus));
+    const mappedRequestAttendanceStatus = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestAttendanceStatus));
+    const mappedRequestReason = normalizeText(getOptionalCellValue(getCellValue, rowNumber, columns.requestReason));
+    const fallbackRequest = findOfficialLeaveRequestFromRow(getCellValue, rowNumber, columns.exitTime + 1);
+    const requestStatus = fallbackRequest?.status ?? mappedRequestStatus;
+    const requestAttendanceStatus = fallbackRequest?.attendanceStatus ?? mappedRequestAttendanceStatus;
+    const requestReason = fallbackRequest?.reason ?? mappedRequestReason;
+    const isApprovedOfficialLeaveRequest = isActiveOfficialLeaveRequestStatus(requestStatus) && isOfficialLeaveStatus(requestAttendanceStatus);
     const officialLeaveNote = isApprovedOfficialLeaveRequest
       ? formatOfficialLeaveRequestNote(requestAttendanceStatus, requestReason)
       : attendanceStatus;
-    const isUnderHalfAttendance = isUnderHalfStatus(attendanceStatus) && !isApprovedOfficialLeaveRequest;
-    const isAbsent = !isApprovedOfficialLeaveRequest && (attendanceStatus === '결석' || isUnderHalfAttendance);
     const isOfficialLeave = isOfficialLeaveStatus(attendanceStatus) || isApprovedOfficialLeaveRequest;
+    const isUnderHalfAttendance = isUnderHalfStatus(attendanceStatus) && !isApprovedOfficialLeaveRequest;
+    const hasOuting = !isOfficialLeave && (attendanceStatus.includes('외출') || Boolean(outingTime));
+    const isAbsent = !isApprovedOfficialLeaveRequest && !hasOuting && (attendanceStatus === '결석' || isUnderHalfAttendance);
 
     if (!name || traineeStatus !== ACTIVE_TRAINEE_STATUS) {
       continue;
@@ -146,7 +151,7 @@ function analyzeAttendanceRows({
       latePeople.push({ name, time: entryTime, note: '지각' });
     }
 
-    if (!isAbsent && !isOfficialLeave && (attendanceStatus === '외출' || Boolean(outingTime))) {
+    if (hasOuting) {
       outingPeople.push({
         name,
         time: outingTime,
@@ -297,6 +302,7 @@ function scoreHeaderColumns(columns: HeaderColumn[]): number {
 }
 
 function getAttendanceColumns(headerColumns: HeaderColumn[], sourceLabel: string): AttendanceColumnMap {
+  const requestStatus = findRequestStatusColumn(headerColumns);
   const columns: AttendanceColumnMap = {
     name: requireColumn(headerColumns, isNameHeader, sourceLabel, '성명'),
     traineeStatus: requireColumn(headerColumns, isTraineeStatusHeader, sourceLabel, '훈련생 상태'),
@@ -306,9 +312,9 @@ function getAttendanceColumns(headerColumns: HeaderColumn[], sourceLabel: string
     outingStart: findColumn(headerColumns, isOutingStartHeader),
     outingEnd: findColumn(headerColumns, isOutingEndHeader),
     outingTime: findColumn(headerColumns, isOutingTimeHeader),
-    requestStatus: findColumn(headerColumns, isRequestStatusHeader),
-    requestAttendanceStatus: findColumn(headerColumns, isRequestAttendanceStatusHeader),
-    requestReason: findColumn(headerColumns, isRequestReasonHeader)
+    requestStatus,
+    requestAttendanceStatus: findRequestColumn(headerColumns, requestStatus, isRequestAttendanceStatusHeader, '출결상태'),
+    requestReason: findRequestColumn(headerColumns, requestStatus, isRequestReasonHeader, '사유')
   };
 
   return columns;
@@ -329,6 +335,29 @@ function requireColumn(
 
 function findColumn(columns: HeaderColumn[], predicate: (column: HeaderColumn) => boolean): number | undefined {
   return columns.find(predicate)?.index;
+}
+
+function findRequestStatusColumn(columns: HeaderColumn[]): number | undefined {
+  return findColumn(columns, isRequestStatusHeader) ?? columns.find((column) => compactHeader(column.current).includes('처리상태'))?.index;
+}
+
+function findRequestColumn(
+  columns: HeaderColumn[],
+  requestStatusColumn: number | undefined,
+  predicate: (column: HeaderColumn) => boolean,
+  fallbackHeader: string
+): number | undefined {
+  const explicitColumn = findColumn(columns, predicate);
+  if (explicitColumn) {
+    return explicitColumn;
+  }
+
+  if (!requestStatusColumn) {
+    return undefined;
+  }
+
+  const fallback = compactHeader(fallbackHeader);
+  return columns.find((column) => column.index > requestStatusColumn && compactHeader(column.current).includes(fallback))?.index;
 }
 
 function findAttendanceStartRow(
@@ -494,6 +523,44 @@ function isOfficialLeaveStatus(status: string): boolean {
   return status.includes('휴가') || status.includes('공가') || status.includes('휴공가');
 }
 
+function isActiveOfficialLeaveRequestStatus(status: string): boolean {
+  if (!status || status === '-') {
+    return false;
+  }
+
+  if (status.includes('취소') || status.includes('회수') || status.includes('반려')) {
+    return false;
+  }
+
+  return status.includes('신청') || status.includes('승인');
+}
+
+function findOfficialLeaveRequestFromRow(
+  getCellValue: AttendanceRowReader,
+  rowNumber: number,
+  startColumn: number
+): { status: string; attendanceStatus: string; reason: string } | undefined {
+  for (let columnIndex = startColumn; columnIndex < startColumn + 12; columnIndex += 1) {
+    const status = normalizeText(getCellValue(rowNumber, columnIndex));
+    if (!isActiveOfficialLeaveRequestStatus(status)) {
+      continue;
+    }
+
+    for (let offset = 1; offset <= 3; offset += 1) {
+      const attendanceStatus = normalizeText(getCellValue(rowNumber, columnIndex + offset));
+      if (isOfficialLeaveStatus(attendanceStatus)) {
+        return {
+          status,
+          attendanceStatus,
+          reason: normalizeText(getCellValue(rowNumber, columnIndex + offset + 1))
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function formatOfficialLeaveRequestNote(status: string, reason: string): string {
   if (status === '휴가') {
     return status;
@@ -514,19 +581,43 @@ function formatTimeRange(startValue: unknown, endValue: unknown): string | undef
     return `${start}~${end}`;
   }
 
-  return start || end;
+  if (start) {
+    return `${start}~`;
+  }
+
+  return end;
+}
+
+function formatCompleteTimeRange(startValue: unknown, endValue: unknown): string | undefined {
+  const start = formatExcelTime(startValue);
+  const end = formatExcelTime(endValue);
+
+  return start && end ? `${start}~${end}` : undefined;
 }
 
 function formatOutingTime(getCellValue: AttendanceRowReader, rowNumber: number, columns: AttendanceColumnMap): string | undefined {
-  const rangeFromColumns = formatTimeRange(
-    getOptionalCellValue(getCellValue, rowNumber, columns.outingStart),
-    getOptionalCellValue(getCellValue, rowNumber, columns.outingEnd)
-  );
+  const outingStartValue = getOptionalCellValue(getCellValue, rowNumber, columns.outingStart);
+  const outingEndValue = getOptionalCellValue(getCellValue, rowNumber, columns.outingEnd);
+  const rangeFromColumns = formatTimeRange(outingStartValue, outingEndValue);
   if (rangeFromColumns) {
     return rangeFromColumns;
   }
 
-  return formatExcelTimeRange(getOptionalCellValue(getCellValue, rowNumber, columns.outingTime));
+  const outingTimeValue = getOptionalCellValue(getCellValue, rowNumber, columns.outingTime);
+  const rangeFromSingleColumn = formatExcelTimeRange(outingTimeValue);
+  if (rangeFromSingleColumn?.includes('~')) {
+    return rangeFromSingleColumn;
+  }
+
+  const firstOutingColumn = columns.outingStart ?? columns.outingTime;
+  const rangeFromAdjacentColumn = firstOutingColumn
+    ? formatCompleteTimeRange(getOptionalCellValue(getCellValue, rowNumber, firstOutingColumn), getCellValue(rowNumber, firstOutingColumn + 1))
+    : undefined;
+  if (rangeFromAdjacentColumn) {
+    return rangeFromAdjacentColumn;
+  }
+
+  return rangeFromSingleColumn ? `${rangeFromSingleColumn}~` : undefined;
 }
 
 function formatExcelTimeRange(value: unknown): string | undefined {
