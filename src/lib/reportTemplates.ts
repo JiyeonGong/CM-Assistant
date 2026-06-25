@@ -7,8 +7,7 @@ export function generateMorningAttendanceTemplate(cohortName: string, date = new
     `*[${cohortName}] ${dateText}(${dayOfWeek}) 오전 출결 현황 공유*`,
     '- *출석:* 0명 (전체: 0명)',
     '- *지각/미입실:* 0명',
-    '- *휴공가:* 0명',
-    '- *결석:* 0명'
+    '- *휴공가:* 0명'
   ].join('\n');
 }
 
@@ -36,7 +35,7 @@ export function generateFinalAttendanceTemplate(cohortName: string, date = new D
     '',
     '- *출석입력요청 검토 결과*',
     '  - *검토 대상:* 0건',
-    '  - *검토 결과:* 이상 없음'
+    '  - *검토 결과:* 오류 수정 후 재검토 완료'
   ].join('\n');
 }
 
@@ -50,8 +49,7 @@ export function generateMorningAttendanceReport(summary: AttendanceSummary): str
     `- *지각/미입실:* ${lateOrMissingPeople.length}명`,
     formatNestedPeopleLines(lateOrMissingPeople),
     `- *휴공가:* ${summary.officialLeaveCount}명`,
-    formatOfficialLeaveLines(summary.officialLeavePeople),
-    '- *결석:* 0명'
+    formatOfficialLeaveLines(summary.officialLeavePeople)
   ]
     .filter(Boolean)
     .join('\n');
@@ -94,7 +92,7 @@ export function generateFinalAttendanceReport(summary: AttendanceSummary): strin
     '',
     '- *출석입력요청 검토 결과*',
     '  - *검토 대상:* 0건',
-    '  - *검토 결과:* 이상 없음'
+    '  - *검토 결과:* 오류 수정 후 재검토 완료'
   ].join('\n');
 }
 
