@@ -850,6 +850,7 @@ button:disabled {
 .calendar-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
   gap: 18px;
 }
 
@@ -939,6 +940,7 @@ button:disabled {
 
 .calendar-detail {
   display: grid;
+  align-self: start;
   align-content: start;
   gap: 14px;
   padding: 18px;
@@ -954,6 +956,9 @@ button:disabled {
 .calendar-detail-list {
   display: grid;
   gap: 10px;
+  max-height: 390px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .calendar-detail-item {
