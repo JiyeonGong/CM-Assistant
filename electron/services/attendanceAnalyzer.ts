@@ -125,7 +125,8 @@ function analyzeAttendanceRows({
     const isOfficialLeave = isOfficialLeaveStatus(attendanceStatus) || isApprovedOfficialLeaveRequest;
     const isUnderHalfAttendance = isUnderHalfStatus(attendanceStatus) && !isApprovedOfficialLeaveRequest;
     const hasOuting = !isOfficialLeave && (attendanceStatus.includes('외출') || Boolean(outingTime));
-    const isAbsent = !isApprovedOfficialLeaveRequest && !hasOuting && (attendanceStatus === '결석' || isUnderHalfAttendance);
+    const hasLate = !isOfficialLeave && !isUnderHalfAttendance && (attendanceStatus.includes('지각') || isAtOrAfterTime(entryTime, LATE_START_TIME));
+    const isAbsent = !isApprovedOfficialLeaveRequest && !hasOuting && !hasLate && (attendanceStatus === '결석' || isUnderHalfAttendance);
 
     if (!name || traineeStatus !== ACTIVE_TRAINEE_STATUS) {
       continue;
@@ -147,7 +148,7 @@ function analyzeAttendanceRows({
 
     if (isAbsent) {
       absentPeople.push({ name, note: isUnderHalfAttendance ? '100분의50미만' : undefined });
-    } else if (!isOfficialLeave && (attendanceStatus === '지각' || isAtOrAfterTime(entryTime, LATE_START_TIME))) {
+    } else if (hasLate) {
       latePeople.push({ name, time: entryTime, note: '지각' });
     }
 
