@@ -213,6 +213,30 @@ export default function QuickMessagesPage() {
     showToast('불시점검 복귀 확인 타이머를 종료했습니다.', 'success');
   }
 
+  async function handleCopyLogComparisonResult(): Promise<void> {
+    handleCopyText(logComparisonResultDraft, '로그 대조 결과');
+
+    const cohortNumber = logResultCohortNumber.trim();
+    if (!cohortNumber) {
+      showToast('기수를 입력하지 않아 오늘 탭 타임라인에는 반영하지 못했습니다. 복사는 정상적으로 됐습니다.', 'warning');
+      return;
+    }
+
+    const course = formatCohortName(logResultCourse, cohortNumber);
+    try {
+      await window.cmAssistant.addManagedCourse(course);
+      await window.cmAssistant.updateTimelineItem({
+        date: getDateInputValue(),
+        itemKey: 'logComparisonResult',
+        scope: course,
+        value: logComparisonResultDraft,
+        autoFilled: true
+      });
+    } catch (error) {
+      showToast(error instanceof Error ? `오늘 탭 타임라인에 반영하지 못했습니다: ${error.message}` : '오늘 탭 타임라인에 반영하지 못했습니다.', 'warning');
+    }
+  }
+
   function handleCopyLogComparisonMessage(): void {
     if (!logStudentName.trim()) {
       showToast('수강생 이름을 입력해주세요.', 'error');
@@ -471,7 +495,7 @@ export default function QuickMessagesPage() {
                 </label>
               </div>
               <textarea className="report-output compact-output" value={logComparisonResultDraft} onChange={(event) => setLogComparisonResultDraft(event.target.value)} />
-              <button type="button" className="copy-button" onClick={() => handleCopyText(logComparisonResultDraft, '로그 대조 결과')}>복사하기</button>
+              <button type="button" className="copy-button" onClick={() => void handleCopyLogComparisonResult()}>복사하기</button>
             </section>
           ) : (
             <>

@@ -1,7 +1,8 @@
 import { clipboard, contextBridge, ipcRenderer } from 'electron';
 import type { AttendanceSummary } from '../src/types/attendance';
-import type { SavedQuickMessages } from '../src/types/appData';
+import type { CreateMemoTemplateInput, MemoTemplate, SavedQuickMessages } from '../src/types/appData';
 import type { CreateRoutineTemplateInput, CreateTodoInput, RoutineTemplate, TodoItem, UpdateRoutineTemplateInput, UpdateTodoInput } from '../src/types/todo';
+import type { DailyTimelineRecord, UpdateTimelineItemInput } from '../src/types/timeline';
 
 const api = {
   selectExcelFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectExcelFile'),
@@ -25,6 +26,18 @@ const api = {
   saveQuickMessage: (key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> =>
     ipcRenderer.invoke('quickMessages:save', key, value),
   showNotification: (title: string, body: string): Promise<boolean> => ipcRenderer.invoke('notification:show', title, body),
+  listManagedCourses: (): Promise<string[]> => ipcRenderer.invoke('courses:list'),
+  addManagedCourse: (course: string): Promise<string[]> => ipcRenderer.invoke('courses:add', course),
+  removeManagedCourse: (course: string): Promise<string[]> => ipcRenderer.invoke('courses:remove', course),
+  getTimelineRecord: (date: string): Promise<DailyTimelineRecord> => ipcRenderer.invoke('timeline:get', date),
+  listTimelineRecords: (): Promise<DailyTimelineRecord[]> => ipcRenderer.invoke('timeline:list'),
+  ensureTodayTimelineRecord: (): Promise<DailyTimelineRecord> => ipcRenderer.invoke('timeline:ensureToday'),
+  updateTimelineItem: (input: UpdateTimelineItemInput): Promise<DailyTimelineRecord> => ipcRenderer.invoke('timeline:updateItem', input),
+  getPersonalMemo: (): Promise<string> => ipcRenderer.invoke('memo:get'),
+  savePersonalMemo: (content: string): Promise<string> => ipcRenderer.invoke('memo:save', content),
+  listMemoTemplates: (): Promise<MemoTemplate[]> => ipcRenderer.invoke('memoTemplates:list'),
+  createMemoTemplate: (input: CreateMemoTemplateInput): Promise<MemoTemplate> => ipcRenderer.invoke('memoTemplates:create', input),
+  deleteMemoTemplate: (id: string): Promise<void> => ipcRenderer.invoke('memoTemplates:delete', id),
   copyText: (text: string): void => clipboard.writeText(text),
   copyReport: (text: string, html: string): void => clipboard.write({ text, html })
 };

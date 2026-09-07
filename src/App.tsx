@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import AttendancePage from './pages/AttendancePage';
 import DashboardPage from './pages/DashboardPage';
 import QuickMessagesPage from './pages/QuickMessagesPage';
+import RecordsPage from './pages/RecordsPage';
 import TodoPage from './pages/TodoPage';
 import { getTodayString } from './lib/todo';
 import type { CreateTodoInput, TodoItem, UpdateTodoInput } from './types/todo';
 
-type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo';
+type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo' | 'records';
 
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
   { id: 'dashboard', label: '오늘' },
@@ -17,9 +18,22 @@ const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
 
 export default function App() {
   const [activePage, setActivePage] = useState<AppPage>('dashboard');
+  const [timelineDate, setTimelineDate] = useState<string | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [todoError, setTodoError] = useState('');
   const currentDateRef = useRef(getTodayString());
+
+  function handleNavClick(page: AppPage): void {
+    if (page === 'dashboard') {
+      setTimelineDate(null);
+    }
+    setActivePage(page);
+  }
+
+  function handleOpenRecordDate(date: string): void {
+    setTimelineDate(date);
+    setActivePage('dashboard');
+  }
 
   useEffect(() => {
     void initializeTodos();
@@ -90,7 +104,12 @@ export default function App() {
         </div>
         <div className="nav-button-group">
           {NAV_ITEMS.map((item) => (
-            <button type="button" className={activePage === item.id ? 'nav-button active' : 'nav-button'} onClick={() => setActivePage(item.id)} key={item.id}>
+            <button
+              type="button"
+              className={activePage === item.id ? 'nav-button active' : 'nav-button'}
+              onClick={() => handleNavClick(item.id)}
+              key={item.id}
+            >
               {item.label}
             </button>
           ))}
@@ -105,12 +124,19 @@ export default function App() {
           onCreateTodo={handleCreateTodo}
           onUpdateTodo={handleUpdateTodo}
           onDeleteTodo={handleDeleteTodo}
-          onNavigateTodo={() => setActivePage('todo')}
+          onNavigateTodo={() => handleNavClick('todo')}
+          onNavigateRecords={() => handleNavClick('records')}
+          date={timelineDate ?? undefined}
+          onBackToRecords={() => handleNavClick('records')}
+          onNavigateToday={() => handleNavClick('dashboard')}
         />
       )}
       {activePage === 'attendance' && <AttendancePage />}
       {activePage === 'quickMessages' && <QuickMessagesPage />}
       {activePage === 'todo' && <TodoPage todos={todos} onCreateTodo={handleCreateTodo} onUpdateTodo={handleUpdateTodo} onDeleteTodo={handleDeleteTodo} />}
+      {activePage === 'records' && (
+        <RecordsPage onBackToToday={() => handleNavClick('dashboard')} onSelectDate={handleOpenRecordDate} />
+      )}
     </main>
   );
 }

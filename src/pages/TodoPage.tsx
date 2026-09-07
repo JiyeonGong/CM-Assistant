@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getTodayString, TODO_STATUS_LABELS } from '../lib/todo';
+import { getTodayString, isHolidayTodo, isNoClassTodo, TODO_STATUS_LABELS } from '../lib/todo';
 import type { CreateTodoInput, RoutineTemplate, TodoItem, TodoPriority, TodoStatus } from '../types/todo';
 
 interface TodoPageProps {
@@ -468,14 +468,6 @@ function formatCalendarDetailDate(date: string): string {
 
 function isPersonalTodo(todo: TodoItem): boolean {
   return todo.category === '개인';
-}
-
-function isNoClassTodo(todo: TodoItem): boolean {
-  return todo.category === '휴강';
-}
-
-function isHolidayTodo(todo: TodoItem): boolean {
-  return todo.category === '공휴일';
 }
 
 function isLeaveTodo(todo: TodoItem): boolean {

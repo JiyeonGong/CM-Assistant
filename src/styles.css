@@ -1396,6 +1396,381 @@ button:disabled {
   font-weight: 800;
 }
 
+.managed-courses-panel {
+  margin-top: 20px;
+}
+
+.course-chip-form {
+  display: grid;
+  grid-template-columns: minmax(200px, 320px) auto;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.course-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.course-chip {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--soft);
+  font-weight: 800;
+}
+
+.course-chip button {
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.course-chip-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.timeline-panel {
+  padding-bottom: 12px;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 12px;
+}
+
+.timeline-item {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fff;
+}
+
+.timeline-item.complete {
+  border-color: var(--accent);
+  background: #faf6ff;
+}
+
+.timeline-item-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.timeline-item-header strong {
+  display: block;
+}
+
+.timeline-time-label {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.timeline-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.timeline-badge.complete {
+  background: var(--accent);
+  color: #fff;
+}
+
+.timeline-badge.clickable {
+  border: 0;
+  cursor: pointer;
+}
+
+.timeline-item-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.timeline-item-row {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-scope-label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.timeline-row-check {
+  justify-self: start;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.timeline-row-check.complete {
+  background: var(--accent);
+  color: #fff;
+}
+
+.timeline-text-field {
+  display: grid;
+  gap: 6px;
+}
+
+.timeline-autofill-tag {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.timeline-note-input {
+  min-height: 100px;
+}
+
+.secondary-dashboard-grid {
+  margin-top: 20px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.back-link:hover {
+  color: #fff;
+}
+
+.records-course-filter {
+  margin-top: 20px;
+}
+
+.course-filter-chip {
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.course-filter-chip.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.records-table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.records-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.records-row {
+  cursor: pointer;
+}
+
+.records-row:hover td {
+  background: var(--soft);
+}
+
+.records-row.today td {
+  background: #faf6ff;
+}
+
+.today-label {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.record-name-icon {
+  margin-right: 6px;
+  color: var(--muted);
+}
+
+.record-flag {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: transparent;
+}
+
+.record-flag.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 900;
+}
+
+.records-load-more {
+  display: block;
+  margin: 18px auto 0;
+}
+
+.today-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 20px;
+}
+
+.today-main-column {
+  min-width: 0;
+}
+
+.sticky-memo-panel {
+  position: sticky;
+  top: 20px;
+}
+
+.memo-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.memo-save-status {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.memo-textarea {
+  min-height: 320px;
+}
+
+.memo-template-button {
+  align-self: flex-start;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(17, 17, 17, 0.5);
+}
+
+.modal-panel {
+  width: min(520px, 100%);
+  max-height: 82vh;
+  padding: 26px;
+  border-radius: 28px;
+  background: var(--panel);
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.memo-template-section {
+  margin-bottom: 18px;
+}
+
+.memo-template-section h4 {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.memo-template-list {
+  display: grid;
+  gap: 8px;
+}
+
+.memo-template-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--soft);
+  text-align: left;
+}
+
+.memo-template-item span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  white-space: pre-line;
+}
+
+.memo-template-item.custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+}
+
+.memo-template-item.custom button:first-child {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--soft);
+  text-align: left;
+}
+
+.memo-template-form {
+  display: grid;
+  gap: 8px;
+}
+
+.memo-template-content-input {
+  min-height: 90px;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     width: min(100% - 20px, 1120px);
@@ -1481,5 +1856,13 @@ button:disabled {
   .todo-edit-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .today-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sticky-memo-panel {
+    position: static;
   }
 }

@@ -2,18 +2,30 @@ import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electr
 import { join } from 'node:path';
 import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
 import {
+  addManagedCourse,
+  createMemoTemplate,
   createRoutineTemplate,
   createTodo,
+  deleteMemoTemplate,
   deleteRoutineTemplate,
   deleteTodo,
   ensureTodayRoutineTodos,
+  ensureTodayTimelineRecord,
+  getPersonalMemo,
   getSavedQuickMessages,
+  getTimelineRecord,
+  listManagedCourses,
+  listMemoTemplates,
+  listTimelineRecords,
   listRoutineTemplates,
   listTodos,
   listTodosByDate,
+  removeManagedCourse,
+  savePersonalMemo,
   saveQuickMessage,
   updateRoutineTemplate,
   updateRoutineTemplateEnabled,
+  updateTimelineItem,
   updateTodo
 } from './services/appDataStore';
 
@@ -78,6 +90,18 @@ app.whenReady().then(() => {
   ipcMain.handle('routineTemplates:delete', async (_event, id: string) => deleteRoutineTemplate(id));
   ipcMain.handle('quickMessages:get', async () => getSavedQuickMessages());
   ipcMain.handle('quickMessages:save', async (_event, key, value: string) => saveQuickMessage(key, value));
+  ipcMain.handle('courses:list', async () => listManagedCourses());
+  ipcMain.handle('courses:add', async (_event, course: string) => addManagedCourse(course));
+  ipcMain.handle('courses:remove', async (_event, course: string) => removeManagedCourse(course));
+  ipcMain.handle('timeline:get', async (_event, date: string) => getTimelineRecord(date));
+  ipcMain.handle('timeline:list', async () => listTimelineRecords());
+  ipcMain.handle('timeline:ensureToday', async () => ensureTodayTimelineRecord());
+  ipcMain.handle('timeline:updateItem', async (_event, input) => updateTimelineItem(input));
+  ipcMain.handle('memo:get', async () => getPersonalMemo());
+  ipcMain.handle('memo:save', async (_event, content: string) => savePersonalMemo(content));
+  ipcMain.handle('memoTemplates:list', async () => listMemoTemplates());
+  ipcMain.handle('memoTemplates:create', async (_event, input) => createMemoTemplate(input));
+  ipcMain.handle('memoTemplates:delete', async (_event, id: string) => deleteMemoTemplate(id));
   ipcMain.handle('notification:show', async (_event, title: string, body: string) => {
     if (!Notification.isSupported()) {
       return false;

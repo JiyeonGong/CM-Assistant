@@ -45,3 +45,11 @@ export function isCompletedToday(todo: TodoItem, today = getTodayString()): bool
 
   return Boolean(todo.completedAt?.startsWith(today)) || todo.dueDate === today;
 }
+
+export function isNoClassTodo(todo: TodoItem): boolean {
+  return todo.category === '휴강';
+}
+
+export function isHolidayTodo(todo: TodoItem): boolean {
+  return todo.category === '공휴일';
+}

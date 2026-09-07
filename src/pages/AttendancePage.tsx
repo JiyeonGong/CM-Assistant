@@ -8,6 +8,7 @@ import {
   generateMorningAttendanceTemplate
 } from '../lib/reportTemplates';
 import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
+import { getTodayString } from '../lib/todo';
 import type { AttendanceSummary } from '../types/attendance';
 
 type MessageType = 'info' | 'error' | 'success';
@@ -20,6 +21,12 @@ interface UiMessage {
 }
 
 const DEFAULT_COHORT_NAME = 'PD_8기';
+
+const REPORT_TIMELINE_ITEM_KEYS: Record<ReportType, string> = {
+  morning: 'morningAttendanceReport',
+  afternoon: 'afternoonAttendanceReport',
+  final: 'finalAttendanceReport'
+};
 
 export default function AttendancePage() {
   const [cohortName, setCohortName] = useState(DEFAULT_COHORT_NAME);
@@ -112,6 +119,27 @@ export default function AttendancePage() {
 
     window.cmAssistant.copyReport(generatedReport, convertSlackMarkdownToClipboardHtml(generatedReport));
     setToastMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 마크다운이 함께 적용됩니다.' });
+
+    if (selectedReportType) {
+      void syncTimelineReport(selectedReportType, generatedReport);
+    }
+  }
+
+  async function syncTimelineReport(reportType: ReportType, report: string): Promise<void> {
+    const course = cohortName.trim() || DEFAULT_COHORT_NAME;
+
+    try {
+      await window.cmAssistant.addManagedCourse(course);
+      await window.cmAssistant.updateTimelineItem({
+        date: getTodayString(),
+        itemKey: REPORT_TIMELINE_ITEM_KEYS[reportType],
+        scope: course,
+        value: report,
+        autoFilled: true
+      });
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? `오늘 탭 타임라인에 반영하지 못했습니다: ${error.message}` : '오늘 탭 타임라인에 반영하지 못했습니다.' });
+    }
   }
 
   return (

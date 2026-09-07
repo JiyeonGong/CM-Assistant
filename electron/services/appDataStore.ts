@@ -2,8 +2,11 @@ import { app } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { SavedQuickMessages } from '../../src/types/appData';
+import type { CreateMemoTemplateInput, MemoTemplate, SavedQuickMessages } from '../../src/types/appData';
 import type { CreateRoutineTemplateInput, CreateTodoInput, RoutineTemplate, TodoItem, TodoPriority, TodoStatus, UpdateRoutineTemplateInput, UpdateTodoInput } from '../../src/types/todo';
+import { createEmptyItemState, createEmptyTimelineRecord, findPreviousClassDayRecord, getTimelineItemDefinition, isItemStateComplete, resolveScopeKeys, TIMELINE_ITEM_DEFINITIONS } from '../../src/lib/timeline';
+import { SHARED_SCOPE_KEY } from '../../src/types/timeline';
+import type { DailyTimelineRecord, UpdateTimelineItemInput } from '../../src/types/timeline';
 
 const DEFAULT_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; category: string }> = [
   { title: '오전 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
@@ -20,12 +23,20 @@ interface AppData {
   todos: TodoItem[];
   quickMessages: SavedQuickMessages;
   routineTemplates: RoutineTemplate[];
+  managedCourses: string[];
+  dailyTimelines: DailyTimelineRecord[];
+  personalMemo: string;
+  memoTemplates: MemoTemplate[];
 }
 
 const DEFAULT_DATA: AppData = {
   todos: [],
   quickMessages: {},
-  routineTemplates: createDefaultRoutineTemplates()
+  routineTemplates: createDefaultRoutineTemplates(),
+  managedCourses: [],
+  dailyTimelines: [],
+  personalMemo: '',
+  memoTemplates: []
 };
 
 function getDataFilePath(): string {
@@ -259,6 +270,149 @@ export async function saveQuickMessage(key: keyof SavedQuickMessages, value: str
   return data.quickMessages;
 }
 
+export async function listManagedCourses(): Promise<string[]> {
+  const data = await readData();
+  return data.managedCourses;
+}
+
+export async function addManagedCourse(course: string): Promise<string[]> {
+  const trimmed = course.trim();
+  if (!trimmed) {
+    throw new Error('과정명을 입력해주세요.');
+  }
+
+  const data = await readData();
+  if (!data.managedCourses.includes(trimmed)) {
+    data.managedCourses.push(trimmed);
+    await writeData(data);
+  }
+
+  return data.managedCourses;
+}
+
+export async function removeManagedCourse(course: string): Promise<string[]> {
+  const data = await readData();
+  data.managedCourses = data.managedCourses.filter((item) => item !== course);
+  await writeData(data);
+  return data.managedCourses;
+}
+
+export async function getTimelineRecord(date: string): Promise<DailyTimelineRecord> {
+  const data = await readData();
+  return data.dailyTimelines.find((record) => record.date === date) ?? createEmptyTimelineRecord(date, data.managedCourses);
+}
+
+export async function listTimelineRecords(): Promise<DailyTimelineRecord[]> {
+  const data = await readData();
+  return [...data.dailyTimelines].sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+export async function ensureTodayTimelineRecord(): Promise<DailyTimelineRecord> {
+  const data = await readData();
+  const today = getTodayString();
+  const existing = data.dailyTimelines.find((record) => record.date === today);
+  if (existing) {
+    return existing;
+  }
+
+  const record = createEmptyTimelineRecord(today, data.managedCourses);
+  const previousRecord = findPreviousClassDayRecord(data.dailyTimelines, data.todos, today);
+
+  if (previousRecord) {
+    for (const definition of TIMELINE_ITEM_DEFINITIONS) {
+      if (definition.autoFillSource !== 'previousClassDay') {
+        continue;
+      }
+
+      const previousScopeStates = previousRecord.items[definition.key] ?? {};
+      for (const scope of resolveScopeKeys(definition, record.courses)) {
+        const previousState = previousScopeStates[scope];
+        if (previousState && previousState.value.trim()) {
+          record.items[definition.key][scope] = {
+            value: previousState.value,
+            note: previousState.note,
+            completed: isItemStateComplete(definition, previousState),
+            autoFilled: true,
+            updatedAt: record.createdAt
+          };
+        }
+      }
+    }
+  }
+
+  data.dailyTimelines.push(record);
+  await writeData(data);
+  return record;
+}
+
+export async function updateTimelineItem(input: UpdateTimelineItemInput): Promise<DailyTimelineRecord> {
+  const definition = getTimelineItemDefinition(input.itemKey);
+  if (!definition) {
+    throw new Error('알 수 없는 타임라인 항목입니다.');
+  }
+
+  const data = await readData();
+  let record = data.dailyTimelines.find((item) => item.date === input.date);
+  if (!record) {
+    record = createEmptyTimelineRecord(input.date, data.managedCourses);
+    data.dailyTimelines.push(record);
+  }
+
+  const scope = input.scope || SHARED_SCOPE_KEY;
+  const previousState = record.items[definition.key]?.[scope] ?? createEmptyItemState();
+  const nextState = {
+    value: input.value !== undefined ? input.value : previousState.value,
+    note: input.note !== undefined ? input.note : previousState.note,
+    autoFilled: input.autoFilled ?? false,
+    updatedAt: new Date().toISOString()
+  };
+
+  record.items[definition.key] = {
+    ...record.items[definition.key],
+    [scope]: { ...nextState, completed: isItemStateComplete(definition, nextState) }
+  };
+  record.updatedAt = new Date().toISOString();
+
+  await writeData(data);
+  return record;
+}
+
+export async function getPersonalMemo(): Promise<string> {
+  const data = await readData();
+  return data.personalMemo;
+}
+
+export async function savePersonalMemo(content: string): Promise<string> {
+  const data = await readData();
+  data.personalMemo = content;
+  await writeData(data);
+  return data.personalMemo;
+}
+
+export async function listMemoTemplates(): Promise<MemoTemplate[]> {
+  const data = await readData();
+  return data.memoTemplates;
+}
+
+export async function createMemoTemplate(input: CreateMemoTemplateInput): Promise<MemoTemplate> {
+  const title = input.title.trim();
+  if (!title) {
+    throw new Error('양식 제목을 입력해주세요.');
+  }
+
+  const data = await readData();
+  const template: MemoTemplate = { id: randomUUID(), title, content: input.content };
+  data.memoTemplates.push(template);
+  await writeData(data);
+  return template;
+}
+
+export async function deleteMemoTemplate(id: string): Promise<void> {
+  const data = await readData();
+  data.memoTemplates = data.memoTemplates.filter((template) => template.id !== id);
+  await writeData(data);
+}
+
 async function readData(): Promise<AppData> {
   const filePath = getDataFilePath();
 
@@ -268,7 +422,11 @@ async function readData(): Promise<AppData> {
     return {
       todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : [],
       quickMessages: parsed.quickMessages ?? {},
-      routineTemplates: normalizeRoutineTemplates(parsed.routineTemplates)
+      routineTemplates: normalizeRoutineTemplates(parsed.routineTemplates),
+      managedCourses: Array.isArray(parsed.managedCourses) ? parsed.managedCourses : [],
+      dailyTimelines: Array.isArray(parsed.dailyTimelines) ? parsed.dailyTimelines : [],
+      personalMemo: typeof parsed.personalMemo === 'string' ? parsed.personalMemo : '',
+      memoTemplates: Array.isArray(parsed.memoTemplates) ? parsed.memoTemplates : []
     };
   } catch (error) {
     if (isFileMissingError(error)) {
