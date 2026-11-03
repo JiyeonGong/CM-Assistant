@@ -10,7 +10,6 @@ import {
   getSavedQuickMessages,
   listRoutineTemplates,
   listTodos,
-  listTodosByDate,
   saveQuickMessage,
   updateRoutineTemplate,
   updateRoutineTemplateEnabled,
@@ -67,7 +66,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle('todo:list', async () => listTodos());
   ipcMain.handle('todo:ensureTodayRoutines', async () => ensureTodayRoutineTodos());
-  ipcMain.handle('todo:listByDate', async (_event, date: string) => listTodosByDate(date));
   ipcMain.handle('todo:create', async (_event, input) => createTodo(input));
   ipcMain.handle('todo:update', async (_event, input) => updateTodo(input));
   ipcMain.handle('todo:delete', async (_event, id: string) => deleteTodo(id));
