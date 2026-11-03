@@ -24,8 +24,6 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [editingRoutineTitle, setEditingRoutineTitle] = useState('');
   const [showCompletedTodos, setShowCompletedTodos] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(getTodayString());
   const visibleTodos = todos.filter((todo) => todo.status !== 'done');
   const completedTodos = todos.filter((todo) => todo.status === 'done');
 
@@ -143,14 +141,6 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
         </form>
       </section>
 
-      <MonthlyTodoCalendar
-        todos={todos}
-        month={calendarMonth}
-        selectedDate={selectedCalendarDate}
-        onChangeMonth={setCalendarMonth}
-        onSelectDate={setSelectedCalendarDate}
-      />
-
       <section className="todo-list-layout">
         <div className="panel todo-list-panel">
           <div className="section-heading split-heading">
@@ -263,104 +253,6 @@ export default function TodoPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTo
   );
 }
 
-function MonthlyTodoCalendar({
-  todos,
-  month,
-  selectedDate,
-  onChangeMonth,
-  onSelectDate
-}: {
-  todos: TodoItem[];
-  month: Date;
-  selectedDate: string;
-  onChangeMonth: (date: Date) => void;
-  onSelectDate: (date: string) => void;
-}) {
-  const calendarDays = getCalendarDays(month);
-  const selectedTodos = getTodosForCalendarDate(todos, selectedDate);
-  const monthLabel = `${month.getFullYear()}년 ${month.getMonth() + 1}월`;
-
-  return (
-    <section className="panel calendar-panel">
-      <div className="section-heading split-heading">
-        <div>
-          <p className="eyebrow">Calendar</p>
-          <h2>월간 보기</h2>
-          <p>날짜별 업무, 개인 일정, 휴강을 함께 확인합니다.</p>
-        </div>
-        <div className="calendar-month-actions">
-          <button type="button" className="secondary-button" onClick={() => onChangeMonth(addMonths(month, -1))}>이전</button>
-          <strong>{monthLabel}</strong>
-          <button type="button" className="secondary-button" onClick={() => onChangeMonth(addMonths(month, 1))}>다음</button>
-        </div>
-      </div>
-
-      <div className="calendar-layout">
-        <div className="calendar-grid" role="grid" aria-label="월간 업무 캘린더">
-          {['일', '월', '화', '수', '목', '금', '토'].map((day, index) => (
-            <div className={`calendar-weekday ${index === 0 ? 'sunday' : ''} ${index === 6 ? 'saturday' : ''}`} key={day}>{day}</div>
-          ))}
-          {calendarDays.map((day) => {
-            const dateKey = getTodayString(day);
-            const dayTodos = getTodosForCalendarDate(todos, dateKey);
-            const personalTodos = dayTodos.filter(isPersonalTodo);
-            const noClassTodos = dayTodos.filter(isNoClassTodo);
-            const holidayTodos = dayTodos.filter(isHolidayTodo);
-            const leaveTodos = dayTodos.filter(isLeaveTodo);
-            const hasScheduleItems = personalTodos.length > 0 || noClassTodos.length > 0 || holidayTodos.length > 0 || leaveTodos.length > 0;
-            const workTodos = dayTodos.filter((todo) => !isCalendarScheduleTodo(todo));
-            const doneCount = workTodos.filter((todo) => todo.status === 'done').length;
-            const isSelected = selectedDate === dateKey;
-            const isCurrentMonth = day.getMonth() === month.getMonth();
-
-            return (
-              <button
-                type="button"
-                className={[
-                  'calendar-day',
-                  isSelected ? 'selected' : '',
-                  isCurrentMonth ? '' : 'muted',
-                  day.getDay() === 0 ? 'sunday' : '',
-                  day.getDay() === 6 ? 'saturday' : '',
-                  hasScheduleItems ? 'has-schedule' : '',
-                  dateKey === getTodayString() ? 'today' : ''
-                ].filter(Boolean).join(' ')}
-                onClick={() => onSelectDate(dateKey)}
-                key={dateKey}
-              >
-                <span>{day.getDate()}</span>
-                <div className="calendar-day-meta">
-                  {workTodos.length > 0 && <small>{doneCount}/{workTodos.length} 완료</small>}
-                  {personalTodos.length > 0 && <small className="event-count">일정 {personalTodos.length}개</small>}
-                  {noClassTodos.length > 0 && <small className="no-class-count">휴강 {noClassTodos.length}건</small>}
-                  {holidayTodos.length > 0 && <small className="holiday-count">공휴일 {holidayTodos.length}건</small>}
-                  {leaveTodos.length > 0 && <small className="leave-count">연차 {leaveTodos.length}건</small>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        <aside className="calendar-detail">
-          <div>
-            <p className="eyebrow">Selected</p>
-            <h3>{formatCalendarDetailDate(selectedDate)}</h3>
-          </div>
-          <div className="calendar-detail-list">
-            {selectedTodos.map((todo) => (
-              <div className={getCalendarDetailClassName(todo)} key={todo.id}>
-                <strong>{todo.title}</strong>
-                <span>{getCalendarTodoMeta(todo)}</span>
-              </div>
-            ))}
-            {selectedTodos.length === 0 && <div className="empty-state small">선택한 날짜의 업무나 일정이 없습니다.</div>}
-          </div>
-        </aside>
-      </div>
-    </section>
-  );
-}
-
 function TodoCard({
   todo,
   isReadonly,
@@ -421,95 +313,4 @@ function TodoCard({
 
 function getPriorityLabel(priority: TodoPriority): string {
   return priority === 'high' ? '높음' : priority === 'medium' ? '보통' : '낮음';
-}
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function addMonths(date: Date, months: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + months, 1);
-}
-
-function getCalendarDays(month: Date): Date[] {
-  const firstDay = startOfMonth(month);
-  const startDate = new Date(firstDay);
-  startDate.setDate(firstDay.getDate() - firstDay.getDay());
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + index);
-    return date;
-  });
-}
-
-function getTodoCalendarDate(todo: TodoItem): string {
-  if (todo.dueDate) {
-    return todo.dueDate;
-  }
-
-  if (todo.completedAt) {
-    return todo.completedAt.slice(0, 10);
-  }
-
-  return todo.createdAt.slice(0, 10);
-}
-
-function getTodosForCalendarDate(todos: TodoItem[], date: string): TodoItem[] {
-  return todos.filter((todo) => getTodoCalendarDate(todo) === date);
-}
-
-function formatCalendarDetailDate(date: string): string {
-  const [year, month, day] = date.split('-').map(Number);
-  const value = new Date(year, month - 1, day);
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-  return `${month}월 ${day}일 ${weekdays[value.getDay()]}요일`;
-}
-
-function isPersonalTodo(todo: TodoItem): boolean {
-  return todo.category === '개인';
-}
-
-function isNoClassTodo(todo: TodoItem): boolean {
-  return todo.category === '휴강';
-}
-
-function isHolidayTodo(todo: TodoItem): boolean {
-  return todo.category === '공휴일';
-}
-
-function isLeaveTodo(todo: TodoItem): boolean {
-  return todo.category === '연차';
-}
-
-function isCalendarScheduleTodo(todo: TodoItem): boolean {
-  return isPersonalTodo(todo) || isNoClassTodo(todo) || isHolidayTodo(todo) || isLeaveTodo(todo);
-}
-
-function getCalendarDetailClassName(todo: TodoItem): string {
-  if (isPersonalTodo(todo)) {
-    return 'calendar-detail-item schedule-event-item';
-  }
-
-  if (isNoClassTodo(todo)) {
-    return 'calendar-detail-item no-class-item';
-  }
-
-  if (isHolidayTodo(todo)) {
-    return 'calendar-detail-item holiday-item';
-  }
-
-  if (isLeaveTodo(todo)) {
-    return 'calendar-detail-item leave-item';
-  }
-
-  return 'calendar-detail-item';
-}
-
-function getCalendarTodoMeta(todo: TodoItem): string {
-  if (isCalendarScheduleTodo(todo)) {
-    return [todo.category, todo.description].filter(Boolean).join(' · ');
-  }
-
-  return `${TODO_STATUS_LABELS[todo.status]} · ${todo.source === 'routine' ? '루틴' : todo.category ?? '추가'}`;
 }

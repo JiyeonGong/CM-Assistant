@@ -37,15 +37,6 @@ export async function listTodos(): Promise<TodoItem[]> {
   return sortTodos(data.todos);
 }
 
-export async function listTodosByDate(date: string): Promise<TodoItem[]> {
-  const todos = await listTodos();
-  return todos.filter((todo) => {
-    if (todo.status === 'done') return false;
-    if (todo.source === 'routine') return todo.dueDate === date;
-    return !todo.dueDate || todo.dueDate <= date;
-  });
-}
-
 export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
   const data = await readData();
   const today = getTodayString();
