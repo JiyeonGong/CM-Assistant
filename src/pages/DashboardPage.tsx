@@ -8,22 +8,17 @@ interface DashboardPageProps {
   onCreateTodo: (input: CreateTodoInput) => Promise<void>;
   onUpdateTodo: (id: string, input: Omit<UpdateTodoInput, 'id'>) => Promise<void>;
   onDeleteTodo: (id: string) => Promise<void>;
-  onNavigateTodo: () => void;
 }
 
-export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTodo, onNavigateTodo }: DashboardPageProps) {
+export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTodo }: DashboardPageProps) {
   const [quickTitle, setQuickTitle] = useState('');
   const todayTodos = todos.filter((todo) => isTodoForToday(todo));
-  const routineTodos = todayTodos.filter((todo) => todo.source === 'routine' && todo.status !== 'done' && todo.status !== 'in_progress');
-  const manualTodos = todayTodos.filter((todo) => todo.source === 'manual' && todo.status !== 'done' && todo.status !== 'in_progress');
+  const pendingTodos = todayTodos.filter((todo) => todo.status !== 'done' && todo.status !== 'in_progress');
   const completedToday = todos.filter((todo) => isCompletedToday(todo));
-  const todayRoutineTodos = todos.filter((todo) => todo.source === 'routine' && todo.dueDate === getTodayInputValue());
-  const routineTotal = todayRoutineTodos.length;
-  const routineDone = todayRoutineTodos.filter((todo) => todo.status === 'done').length;
-  const dashboardStatsTodos = todos.filter((todo) => isTodoForToday(todo) || (todo.source === 'manual' && isCompletedToday(todo)));
+  const dashboardStatsTodos = todos.filter((todo) => isTodoForToday(todo) || isCompletedToday(todo));
   const stats = getTodoStats(dashboardStatsTodos);
   const activeTodos = todayTodos.filter((todo) => todo.status === 'in_progress');
-  const nextTodo = activeTodos[0] ?? routineTodos[0] ?? manualTodos[0];
+  const nextTodo = activeTodos[0] ?? pendingTodos[0];
 
   async function handleQuickAdd(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -34,8 +29,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
     await onCreateTodo({
       title: quickTitle,
       priority: 'medium',
-      dueDate: getTodayInputValue(),
-      source: 'manual'
+      dueDate: getTodayInputValue()
     });
     setQuickTitle('');
   }
@@ -51,9 +45,8 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
         </div>
         <div className="hero-side-panel">
           <span>오늘 진행</span>
-          <strong>루틴 {routineDone}/{routineTotal || 5}</strong>
-          <small>추가 {manualTodos.length}개</small>
-          <button type="button" className="secondary-button light-button" onClick={onNavigateTodo}>전체 업무 보기</button>
+          <strong>할 일 {pendingTodos.length}개</strong>
+          <small>완료 {completedToday.length}개</small>
         </div>
       </section>
 
@@ -67,20 +60,11 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
       <section className="dashboard-grid">
         <div className="panel focus-panel">
           <div className="section-heading">
-            <p className="eyebrow">Routine</p>
-            <h2>오늘 루틴</h2>
-            <p>순서대로 확인하면 오늘 출결 운영이 정리됩니다.</p>
+            <p className="eyebrow">Today</p>
+            <h2>오늘 할 일</h2>
+            <p>오늘 처리할 업무를 한곳에서 확인합니다.</p>
           </div>
-          <TodoPreviewList todos={routineTodos} emptyText="남은 루틴이 없습니다." mode="routine" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
-        </div>
-
-        <div className="panel">
-          <div className="section-heading">
-            <p className="eyebrow">Added</p>
-            <h2>추가 업무</h2>
-            <p>오늘 처리할 비정기 업무만 모아봅니다.</p>
-          </div>
-          <TodoPreviewList todos={manualTodos} emptyText="추가 업무가 없습니다." mode="manual" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={pendingTodos} emptyText="오늘 할 일이 없습니다." mode="pending" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
@@ -119,7 +103,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
   );
 }
 
-type TodoPreviewMode = 'manual' | 'routine' | 'active' | 'readonly';
+type TodoPreviewMode = 'pending' | 'active' | 'readonly';
 
 interface TodoPreviewActions {
   onUpdateTodo: (id: string, input: Omit<UpdateTodoInput, 'id'>) => Promise<void>;
@@ -141,15 +125,6 @@ function TodoPreviewList({ todos, emptyText, mode, scrollable = false, onUpdateT
 function TodoPreviewItem({ todo, mode, onUpdateTodo, onDeleteTodo }: { todo: TodoItem; mode: TodoPreviewMode } & TodoPreviewActions) {
   return (
     <div className="todo-preview-item">
-      {mode === 'routine' && (
-        <input
-          className="todo-check"
-          type="checkbox"
-          aria-label={`${todo.title} 완료`}
-          checked={todo.status === 'done'}
-          onChange={(event) => onUpdateTodo(todo.id, { status: event.target.checked ? 'done' : 'todo' })}
-        />
-      )}
       <div className="todo-preview-content">
         <strong>{todo.title}</strong>
         <span>{formatTodoMeta(todo)}</span>
@@ -159,7 +134,7 @@ function TodoPreviewItem({ todo, mode, onUpdateTodo, onDeleteTodo }: { todo: Tod
           <button type="button" className="mini-button" onClick={() => onUpdateTodo(todo.id, { status: 'in_progress' })}>진행</button>
         )}
         {mode === 'active' && <button type="button" className="mini-button" onClick={() => onUpdateTodo(todo.id, { status: 'done' })}>완료</button>}
-        {mode === 'manual' && <button type="button" className="icon-button" aria-label={`${todo.title} 삭제`} onClick={() => onDeleteTodo(todo.id)}>×</button>}
+        {mode === 'pending' && <button type="button" className="icon-button" aria-label={`${todo.title} 삭제`} onClick={() => onDeleteTodo(todo.id)}>×</button>}
       </div>
     </div>
   );
@@ -179,11 +154,7 @@ function getPriorityLabel(priority: TodoItem['priority']): string {
 }
 
 function formatTodoMeta(todo: TodoItem): string {
-  const parts = [TODO_STATUS_LABELS[todo.status]];
-
-  if (todo.source === 'manual') {
-    parts.push(getPriorityLabel(todo.priority));
-  }
+  const parts = [TODO_STATUS_LABELS[todo.status], getPriorityLabel(todo.priority)];
 
   if (todo.category) {
     parts.push(todo.category);

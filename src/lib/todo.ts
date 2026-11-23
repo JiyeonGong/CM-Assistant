@@ -31,10 +31,6 @@ export function isTodoForToday(todo: TodoItem, today = getTodayString()): boolea
     return false;
   }
 
-  if (todo.source === 'routine') {
-    return todo.dueDate === today;
-  }
-
   return !todo.dueDate || todo.dueDate <= today;
 }
 

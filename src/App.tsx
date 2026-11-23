@@ -1,28 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
+import CohortProfilePicker from './components/CohortProfilePicker';
 import AttendancePage from './pages/AttendancePage';
 import DashboardPage from './pages/DashboardPage';
 import QuickMessagesPage from './pages/QuickMessagesPage';
-import TodoPage from './pages/TodoPage';
 import { getTodayString } from './lib/todo';
+import type { CohortProfileSettings, CreateCohortProfileInput } from './types/cohortProfile';
 import type { CreateTodoInput, TodoItem, UpdateTodoInput } from './types/todo';
 
-type AppPage = 'dashboard' | 'attendance' | 'quickMessages' | 'todo';
+type AppPage = 'dashboard' | 'attendance' | 'quickMessages';
 
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
-  { id: 'dashboard', label: '오늘' },
   { id: 'attendance', label: '출결' },
-  { id: 'quickMessages', label: '업무' },
-  { id: 'todo', label: '관리' }
+  { id: 'dashboard', label: '오늘' },
+  { id: 'quickMessages', label: '업무' }
 ];
 
 export default function App() {
-  const [activePage, setActivePage] = useState<AppPage>('dashboard');
+  const [activePage, setActivePage] = useState<AppPage>('attendance');
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [todoError, setTodoError] = useState('');
+  const [cohortProfileSettings, setCohortProfileSettings] = useState<CohortProfileSettings | null>(null);
+  const [cohortProfileError, setCohortProfileError] = useState('');
+  const [isCohortProfileBusy, setIsCohortProfileBusy] = useState(false);
   const currentDateRef = useRef(getTodayString());
+  const activeCohortProfile = cohortProfileSettings?.profiles.find((profile) => profile.id === cohortProfileSettings.activeProfileId);
 
   useEffect(() => {
     void initializeTodos();
+    void initializeCohortProfiles();
 
     const intervalId = window.setInterval(() => {
       const today = getTodayString();
@@ -38,13 +43,74 @@ export default function App() {
   }, []);
 
   async function initializeTodos(): Promise<void> {
-    const nextTodos = await window.cmAssistant.ensureTodayRoutineTodos();
+    const nextTodos = await window.cmAssistant.listTodos();
     setTodos(nextTodos);
   }
 
   async function refreshTodos(): Promise<void> {
     const nextTodos = await window.cmAssistant.listTodos();
     setTodos(nextTodos);
+  }
+
+  async function initializeCohortProfiles(): Promise<void> {
+    setIsCohortProfileBusy(true);
+    setCohortProfileError('');
+    try {
+      setCohortProfileSettings(await window.cmAssistant.getCohortProfileSettings());
+    } catch (error) {
+      setCohortProfileError(error instanceof Error ? error.message : '과정·기수를 불러오지 못했습니다.');
+    } finally {
+      setIsCohortProfileBusy(false);
+    }
+  }
+
+  async function handleCreateCohortProfile(input: CreateCohortProfileInput): Promise<boolean> {
+    if (isCohortProfileBusy) return false;
+    setIsCohortProfileBusy(true);
+    setCohortProfileError('');
+    try {
+      setCohortProfileSettings(await window.cmAssistant.createCohortProfile(input));
+      return true;
+    } catch (error) {
+      setCohortProfileError(error instanceof Error ? error.message : '과정·기수를 추가하지 못했습니다.');
+      return false;
+    } finally {
+      setIsCohortProfileBusy(false);
+    }
+  }
+
+  async function handleSelectCohortProfile(id: string): Promise<boolean> {
+    if (isCohortProfileBusy) return false;
+    if (id === cohortProfileSettings?.activeProfileId) {
+      return true;
+    }
+
+    setIsCohortProfileBusy(true);
+    setCohortProfileError('');
+    try {
+      setCohortProfileSettings(await window.cmAssistant.selectCohortProfile(id));
+      return true;
+    } catch (error) {
+      setCohortProfileError(error instanceof Error ? error.message : '과정·기수를 선택하지 못했습니다.');
+      return false;
+    } finally {
+      setIsCohortProfileBusy(false);
+    }
+  }
+
+  async function handleDeleteCohortProfile(id: string): Promise<boolean> {
+    if (isCohortProfileBusy) return false;
+    setIsCohortProfileBusy(true);
+    setCohortProfileError('');
+    try {
+      setCohortProfileSettings(await window.cmAssistant.deleteCohortProfile(id));
+      return true;
+    } catch (error) {
+      setCohortProfileError(error instanceof Error ? error.message : '과정·기수를 삭제하지 못했습니다.');
+      return false;
+    } finally {
+      setIsCohortProfileBusy(false);
+    }
   }
 
   async function handleCreateTodo(input: CreateTodoInput): Promise<void> {
@@ -99,18 +165,28 @@ export default function App() {
 
       {todoError && <p className="status-message error app-level-message">{todoError}</p>}
 
+      {(activePage === 'attendance' || activePage === 'quickMessages') && (
+        <CohortProfilePicker
+          settings={cohortProfileSettings}
+          error={cohortProfileError}
+          isBusy={isCohortProfileBusy}
+          onCreate={handleCreateCohortProfile}
+          onSelect={handleSelectCohortProfile}
+          onDelete={handleDeleteCohortProfile}
+          onRetry={initializeCohortProfiles}
+        />
+      )}
+
       {activePage === 'dashboard' && (
         <DashboardPage
           todos={todos}
           onCreateTodo={handleCreateTodo}
           onUpdateTodo={handleUpdateTodo}
           onDeleteTodo={handleDeleteTodo}
-          onNavigateTodo={() => setActivePage('todo')}
         />
       )}
-      {activePage === 'attendance' && <AttendancePage />}
-      {activePage === 'quickMessages' && <QuickMessagesPage />}
-      {activePage === 'todo' && <TodoPage todos={todos} onCreateTodo={handleCreateTodo} onUpdateTodo={handleUpdateTodo} onDeleteTodo={handleDeleteTodo} />}
+      {activePage === 'attendance' && activeCohortProfile && <AttendancePage activeCohortProfile={activeCohortProfile} />}
+      {activePage === 'quickMessages' && activeCohortProfile && <QuickMessagesPage activeCohortProfile={activeCohortProfile} />}
     </main>
   );
 }
