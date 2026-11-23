@@ -6,7 +6,6 @@ import {
   createTodo,
   deleteCohortProfile,
   deleteTodo,
-  ensureTodayRoutineTodos,
   getCohortProfileSettings,
   getSavedQuickMessages,
   listTodos,
@@ -72,7 +71,6 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('todo:list', async () => runDataOperation(listTodos));
-  ipcMain.handle('todo:ensureTodayRoutines', async () => runDataOperation(ensureTodayRoutineTodos));
   ipcMain.handle('todo:create', async (_event, input) => runDataOperation(() => createTodo(input)));
   ipcMain.handle('todo:update', async (_event, input) => runDataOperation(() => updateTodo(input)));
   ipcMain.handle('todo:delete', async (_event, id: string) => runDataOperation(() => deleteTodo(id)));

@@ -788,12 +788,6 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-.todo-check {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-}
-
 .todo-preview-actions {
   display: flex;
   gap: 6px;

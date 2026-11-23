@@ -1,6 +1,6 @@
 export type TodoStatus = 'todo' | 'in_progress' | 'done' | 'hold';
 export type TodoPriority = 'low' | 'medium' | 'high';
-export type TodoSource = 'manual' | 'routine';
+export type TodoSource = 'manual';
 
 export interface TodoItem {
   id: string;
@@ -22,7 +22,6 @@ export interface CreateTodoInput {
   priority: TodoPriority;
   category?: string;
   dueDate?: string;
-  source?: TodoSource;
 }
 
 export interface UpdateTodoInput {
@@ -33,7 +32,6 @@ export interface UpdateTodoInput {
   priority?: TodoPriority;
   category?: string;
   dueDate?: string;
-  source?: TodoSource;
 }
 
 export interface TodoStats {

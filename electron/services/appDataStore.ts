@@ -5,17 +5,7 @@ import { dirname, join } from 'node:path';
 import { COHORT_COURSES } from '../../src/lib/cohortProfiles';
 import type { SavedQuickMessages } from '../../src/types/appData';
 import type { CohortProfile, CohortProfileSettings } from '../../src/types/cohortProfile';
-import type { CreateTodoInput, TodoItem, TodoPriority, TodoStatus, UpdateTodoInput } from '../../src/types/todo';
-
-const DEFAULT_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; category: string }> = [
-  { title: '오전 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
-  { title: '오전 출결 현황 공유', priority: 'high', category: '보고' },
-  { title: '오후 출결 현황 공유', priority: 'medium', category: '보고' },
-  { title: '최종 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
-  { title: '최종 확정 현황 공유', priority: 'high', category: '보고' }
-];
-
-const DEFAULT_ROUTINE_TODO_TITLES = new Set(DEFAULT_ROUTINE_TODOS.map((todo) => todo.title));
+import type { CreateTodoInput, TodoItem, TodoStatus, UpdateTodoInput } from '../../src/types/todo';
 
 interface AppData {
   todos: TodoItem[];
@@ -35,56 +25,6 @@ export async function listTodos(): Promise<TodoItem[]> {
   return sortTodos(data.todos);
 }
 
-export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
-  const data = await readData();
-  const today = getTodayString();
-  const now = new Date().toISOString();
-  let hasChanges = false;
-  const seenTodayRoutineTitles = new Set<string>();
-
-  const cleanedTodos = data.todos.filter((todo) => {
-    if (todo.source !== 'routine' || todo.dueDate !== today) {
-      return true;
-    }
-
-    if (!DEFAULT_ROUTINE_TODO_TITLES.has(todo.title) || seenTodayRoutineTitles.has(todo.title)) {
-      hasChanges = true;
-      return false;
-    }
-
-    seenTodayRoutineTitles.add(todo.title);
-    return true;
-  });
-
-  data.todos = cleanedTodos;
-
-  for (const routine of DEFAULT_ROUTINE_TODOS) {
-    const exists = data.todos.some((todo) => todo.source === 'routine' && todo.dueDate === today && todo.title === routine.title);
-    if (exists) {
-      continue;
-    }
-
-    data.todos.push({
-      id: randomUUID(),
-      title: routine.title,
-      status: 'todo',
-      priority: routine.priority,
-      category: routine.category,
-      dueDate: today,
-      source: 'routine',
-      createdAt: now,
-      updatedAt: now
-    });
-    hasChanges = true;
-  }
-
-  if (hasChanges) {
-    await writeData(data);
-  }
-
-  return sortTodos(data.todos);
-}
-
 export async function createTodo(input: CreateTodoInput): Promise<TodoItem> {
   const title = input.title.trim();
   if (!title) {
@@ -101,7 +41,7 @@ export async function createTodo(input: CreateTodoInput): Promise<TodoItem> {
     priority: input.priority,
     category: cleanOptional(input.category),
     dueDate: cleanOptional(input.dueDate),
-    source: input.source ?? 'manual',
+    source: 'manual',
     createdAt: now,
     updatedAt: now
   };
@@ -251,7 +191,7 @@ async function readData(): Promise<AppData> {
       ? parsed.activeCohortProfileId as string
       : cohortProfiles[0].id;
     return {
-      todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : [],
+      todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo).filter((todo): todo is TodoItem => Boolean(todo)) : [],
       quickMessages: parsed.quickMessages ?? {},
       cohortProfiles,
       activeCohortProfileId
@@ -306,23 +246,11 @@ function sortTodos(todos: TodoItem[]): TodoItem[] {
     const dueDateDiff = (a.dueDate ?? '9999-12-31').localeCompare(b.dueDate ?? '9999-12-31');
     if (dueDateDiff !== 0) return dueDateDiff;
 
-    const routineOrderDiff = getRoutineOrder(a) - getRoutineOrder(b);
-    if (routineOrderDiff !== 0) return routineOrderDiff;
-
     const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (priorityDiff !== 0) return priorityDiff;
 
     return a.createdAt.localeCompare(b.createdAt);
   });
-}
-
-function getRoutineOrder(todo: TodoItem): number {
-  if (todo.source !== 'routine') {
-    return Number.MAX_SAFE_INTEGER;
-  }
-
-  const defaultRoutineIndex = DEFAULT_ROUTINE_TODOS.findIndex((routine) => routine.title === todo.title);
-  return defaultRoutineIndex === -1 ? Number.MAX_SAFE_INTEGER : defaultRoutineIndex;
 }
 
 function createDefaultCohortProfile(): CohortProfile {
@@ -408,18 +336,18 @@ function pickCohortProfileSettings(data: AppData): CohortProfileSettings {
   };
 }
 
-function normalizeTodo(todo: TodoItem): TodoItem {
+function normalizeTodo(todo: TodoItem): TodoItem | null {
+  if ((todo as { source?: string }).source === 'routine') {
+    return null;
+  }
+
   const completedAt = todo.completedAt ?? (todo.status === 'done' ? todo.updatedAt ?? todo.createdAt : undefined);
 
   return {
     ...todo,
     completedAt,
-    source: todo.source ?? 'manual'
+    source: 'manual'
   };
-}
-
-function getTodayString(date = new Date()): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function isFileMissingError(error: unknown): boolean {

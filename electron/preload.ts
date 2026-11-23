@@ -11,7 +11,6 @@ const api = {
   analyzePastedAttendance: (pastedText: string, cohortName: string): Promise<AttendanceSummary> =>
     ipcRenderer.invoke('attendance:analyzePastedTable', pastedText, cohortName),
   listTodos: (): Promise<TodoItem[]> => ipcRenderer.invoke('todo:list'),
-  ensureTodayRoutineTodos: (): Promise<TodoItem[]> => ipcRenderer.invoke('todo:ensureTodayRoutines'),
   createTodo: (input: CreateTodoInput): Promise<TodoItem> => ipcRenderer.invoke('todo:create', input),
   updateTodo: (input: UpdateTodoInput): Promise<TodoItem> => ipcRenderer.invoke('todo:update', input),
   deleteTodo: (id: string): Promise<void> => ipcRenderer.invoke('todo:delete', id),

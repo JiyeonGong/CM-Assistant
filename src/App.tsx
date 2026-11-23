@@ -10,13 +10,13 @@ import type { CreateTodoInput, TodoItem, UpdateTodoInput } from './types/todo';
 type AppPage = 'dashboard' | 'attendance' | 'quickMessages';
 
 const NAV_ITEMS: Array<{ id: AppPage; label: string }> = [
-  { id: 'dashboard', label: '오늘' },
   { id: 'attendance', label: '출결' },
+  { id: 'dashboard', label: '오늘' },
   { id: 'quickMessages', label: '업무' }
 ];
 
 export default function App() {
-  const [activePage, setActivePage] = useState<AppPage>('dashboard');
+  const [activePage, setActivePage] = useState<AppPage>('attendance');
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [todoError, setTodoError] = useState('');
   const [cohortProfileSettings, setCohortProfileSettings] = useState<CohortProfileSettings | null>(null);
@@ -43,7 +43,7 @@ export default function App() {
   }, []);
 
   async function initializeTodos(): Promise<void> {
-    const nextTodos = await window.cmAssistant.ensureTodayRoutineTodos();
+    const nextTodos = await window.cmAssistant.listTodos();
     setTodos(nextTodos);
   }
 

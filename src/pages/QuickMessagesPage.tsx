@@ -267,14 +267,6 @@ export default function QuickMessagesPage({ activeCohortProfile }: { activeCohor
           {toastMessage.text}
         </div>
       )}
-      <section className="hero-card compact-hero simple-hero">
-        <div>
-          <p className="eyebrow">Work Tools</p>
-          <h1>오늘 업무를 빠르게 처리해요</h1>
-          <p className="hero-copy">불시점검 처럼 매일 반복되는 행정 업무의 빠른 처리를 도와드립니다.</p>
-        </div>
-      </section>
-
       <section className="quick-message-layout">
         <div className="panel">
           <div className="section-heading">
