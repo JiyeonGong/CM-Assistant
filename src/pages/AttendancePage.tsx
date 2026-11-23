@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   generateAfternoonAttendanceReport,
   generateAfternoonAttendanceTemplate,
@@ -7,8 +7,10 @@ import {
   generateMorningAttendanceReport,
   generateMorningAttendanceTemplate
 } from '../lib/reportTemplates';
+import { formatCohortProfile } from '../lib/cohortProfiles';
 import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
 import type { AttendanceSummary } from '../types/attendance';
+import type { CohortProfile } from '../types/cohortProfile';
 
 type MessageType = 'info' | 'error' | 'success';
 type AttendanceInputMode = 'file' | 'paste';
@@ -19,11 +21,10 @@ interface UiMessage {
   text: string;
 }
 
-const DEFAULT_COHORT_NAME = 'PD_8기';
-
-export default function AttendancePage() {
-  const [cohortName, setCohortName] = useState(DEFAULT_COHORT_NAME);
-  const [inputMode, setInputMode] = useState<AttendanceInputMode>('file');
+export default function AttendancePage({ activeCohortProfile }: { activeCohortProfile: CohortProfile }) {
+  const cohortName = formatCohortProfile(activeCohortProfile);
+  const cohortNameRef = useRef(cohortName);
+  const [inputMode, setInputMode] = useState<AttendanceInputMode>('paste');
   const [filePath, setFilePath] = useState('');
   const [pastedTableText, setPastedTableText] = useState('');
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
@@ -41,6 +42,14 @@ export default function AttendancePage() {
     const timeoutId = window.setTimeout(() => setToastMessage(null), 2_400);
     return () => window.clearTimeout(timeoutId);
   }, [toastMessage]);
+
+  useEffect(() => {
+    cohortNameRef.current = cohortName;
+    setSummary(null);
+    setGeneratedReport('');
+    setSelectedReportType(null);
+    setMessage(null);
+  }, [cohortName]);
 
   async function handleSelectFile(): Promise<void> {
     setMessage(null);
@@ -65,41 +74,43 @@ export default function AttendancePage() {
 
     setIsAnalyzing(true);
     setMessage(null);
+    const requestedCohortName = cohortName;
 
     try {
-      const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
       const result =
         inputMode === 'file'
-          ? await window.cmAssistant.analyzeAttendance(filePath, trimmedCohortName)
-          : await window.cmAssistant.analyzePastedAttendance(pastedTableText, trimmedCohortName);
+          ? await window.cmAssistant.analyzeAttendance(filePath, requestedCohortName)
+          : await window.cmAssistant.analyzePastedAttendance(pastedTableText, requestedCohortName);
+      if (cohortNameRef.current !== requestedCohortName) {
+        return;
+      }
       setSummary(result);
       setGeneratedReport(generateMorningAttendanceReport(result));
       setSelectedReportType('morning');
       setMessage({ type: 'success', text: '출결 분석이 완료되어 오전 보고 멘트를 자동 생성했습니다.' });
     } catch (error) {
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.' });
+      if (cohortNameRef.current === requestedCohortName) {
+        setMessage({ type: 'error', text: error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.' });
+      }
     } finally {
       setIsAnalyzing(false);
     }
   }
 
   function handleGenerateMorningReport(): void {
-    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
-    setGeneratedReport(summary ? generateMorningAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateMorningAttendanceTemplate(trimmedCohortName));
+    setGeneratedReport(summary ? generateMorningAttendanceReport({ ...summary, cohortName }) : generateMorningAttendanceTemplate(cohortName));
     setSelectedReportType('morning');
     setMessage({ type: 'info', text: summary ? '오전 출결 보고 멘트를 생성했습니다.' : '오전 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateAfternoonReport(): void {
-    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
-    setGeneratedReport(summary ? generateAfternoonAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateAfternoonAttendanceTemplate(trimmedCohortName));
+    setGeneratedReport(summary ? generateAfternoonAttendanceReport({ ...summary, cohortName }) : generateAfternoonAttendanceTemplate(cohortName));
     setSelectedReportType('afternoon');
     setMessage({ type: 'info', text: summary ? '오후 출결 보고 멘트를 생성했습니다.' : '오후 출결 보고 기본 양식을 생성했습니다.' });
   }
 
   function handleGenerateFinalReport(): void {
-    const trimmedCohortName = cohortName.trim() || DEFAULT_COHORT_NAME;
-    setGeneratedReport(summary ? generateFinalAttendanceReport({ ...summary, cohortName: trimmedCohortName }) : generateFinalAttendanceTemplate(trimmedCohortName));
+    setGeneratedReport(summary ? generateFinalAttendanceReport({ ...summary, cohortName }) : generateFinalAttendanceTemplate(cohortName));
     setSelectedReportType('final');
     setMessage({ type: 'info', text: summary ? '최종 확정 출결 보고 멘트를 생성했습니다.' : '최종 확정 출결 보고 기본 양식을 생성했습니다.' });
   }
@@ -121,14 +132,6 @@ export default function AttendancePage() {
           {toastMessage.text}
         </div>
       )}
-      <section className="hero-card compact-hero simple-hero">
-        <div>
-          <p className="eyebrow">Attendance</p>
-          <h1>출결을 확인하고 바로 공유해요</h1>
-          <p className="hero-copy">출석부 입력, 분석 결과 확인, 보고 멘트 복사까지 한 흐름으로 처리합니다.</p>
-        </div>
-      </section>
-
       <section className="panel input-panel">
         <div className="section-heading step-heading">
           <p className="eyebrow">Step 1</p>
@@ -137,12 +140,15 @@ export default function AttendancePage() {
         </div>
 
         <div className="attendance-input-grid">
-          <label className="field-label" htmlFor="cohortName">기수명</label>
-          <input id="cohortName" className="text-input" value={cohortName} onChange={(event) => setCohortName(event.target.value)} placeholder="예: PD_8기" />
+          <span className="field-label">과정·기수</span>
+          <div className="selected-cohort-value">
+            <strong>{cohortName}</strong>
+            <span>상단 선택값이 보고 문구에 적용됩니다.</span>
+          </div>
 
           <div className="input-mode-row">
-            <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
             <button type="button" className={inputMode === 'paste' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('paste')}>표 붙여넣기</button>
+            <button type="button" className={inputMode === 'file' ? 'mode-button active' : 'mode-button'} onClick={() => setInputMode('file')}>파일 선택</button>
           </div>
 
           {inputMode === 'file' ? (
@@ -181,7 +187,7 @@ export default function AttendancePage() {
             <h2>결과 확인</h2>
             <p>보고 전에 이상 인원과 QR 미촬영자를 확인합니다.</p>
           </div>
-          {summary ? <SummaryCard summary={summary} /> : <EmptyState text="출석부를 선택한 뒤 분석을 실행해주세요." />}
+          {summary ? <SummaryCard summary={summary} /> : <EmptyState text="출석부 표를 붙여넣거나 파일을 선택한 뒤 분석을 실행해주세요." />}
         </section>
 
         <section className="panel report-panel">

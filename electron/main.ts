@@ -2,22 +2,29 @@ import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electr
 import { join } from 'node:path';
 import { analyzeAttendancePastedTable, analyzeAttendanceWorkbook } from './services/attendanceAnalyzer';
 import {
-  createRoutineTemplate,
+  createCohortProfile,
   createTodo,
-  deleteRoutineTemplate,
+  deleteCohortProfile,
   deleteTodo,
   ensureTodayRoutineTodos,
+  getCohortProfileSettings,
   getSavedQuickMessages,
-  listRoutineTemplates,
   listTodos,
   saveQuickMessage,
-  updateRoutineTemplate,
-  updateRoutineTemplateEnabled,
+  selectCohortProfile,
   updateTodo
 } from './services/appDataStore';
 
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.cm-assistant.app');
+}
+
+let appDataOperationQueue: Promise<void> = Promise.resolve();
+
+function runDataOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = appDataOperationQueue.then(operation, operation);
+  appDataOperationQueue = result.then(() => undefined, () => undefined);
+  return result;
 }
 
 function createWindow(): void {
@@ -64,18 +71,17 @@ app.whenReady().then(() => {
     return analyzeAttendancePastedTable(pastedText, cohortName);
   });
 
-  ipcMain.handle('todo:list', async () => listTodos());
-  ipcMain.handle('todo:ensureTodayRoutines', async () => ensureTodayRoutineTodos());
-  ipcMain.handle('todo:create', async (_event, input) => createTodo(input));
-  ipcMain.handle('todo:update', async (_event, input) => updateTodo(input));
-  ipcMain.handle('todo:delete', async (_event, id: string) => deleteTodo(id));
-  ipcMain.handle('routineTemplates:list', async () => listRoutineTemplates());
-  ipcMain.handle('routineTemplates:create', async (_event, input) => createRoutineTemplate(input));
-  ipcMain.handle('routineTemplates:update', async (_event, input) => updateRoutineTemplate(input));
-  ipcMain.handle('routineTemplates:updateEnabled', async (_event, id: string, enabled: boolean) => updateRoutineTemplateEnabled(id, enabled));
-  ipcMain.handle('routineTemplates:delete', async (_event, id: string) => deleteRoutineTemplate(id));
-  ipcMain.handle('quickMessages:get', async () => getSavedQuickMessages());
-  ipcMain.handle('quickMessages:save', async (_event, key, value: string) => saveQuickMessage(key, value));
+  ipcMain.handle('todo:list', async () => runDataOperation(listTodos));
+  ipcMain.handle('todo:ensureTodayRoutines', async () => runDataOperation(ensureTodayRoutineTodos));
+  ipcMain.handle('todo:create', async (_event, input) => runDataOperation(() => createTodo(input)));
+  ipcMain.handle('todo:update', async (_event, input) => runDataOperation(() => updateTodo(input)));
+  ipcMain.handle('todo:delete', async (_event, id: string) => runDataOperation(() => deleteTodo(id)));
+  ipcMain.handle('cohortProfiles:get', async () => runDataOperation(getCohortProfileSettings));
+  ipcMain.handle('cohortProfiles:create', async (_event, input: unknown) => runDataOperation(() => createCohortProfile(input)));
+  ipcMain.handle('cohortProfiles:select', async (_event, id: unknown) => runDataOperation(() => selectCohortProfile(id)));
+  ipcMain.handle('cohortProfiles:delete', async (_event, id: unknown) => runDataOperation(() => deleteCohortProfile(id)));
+  ipcMain.handle('quickMessages:get', async () => runDataOperation(getSavedQuickMessages));
+  ipcMain.handle('quickMessages:save', async (_event, key, value: string) => runDataOperation(() => saveQuickMessage(key, value)));
   ipcMain.handle('notification:show', async (_event, title: string, body: string) => {
     if (!Notification.isSupported()) {
       return false;

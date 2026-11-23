@@ -8,10 +8,9 @@ interface DashboardPageProps {
   onCreateTodo: (input: CreateTodoInput) => Promise<void>;
   onUpdateTodo: (id: string, input: Omit<UpdateTodoInput, 'id'>) => Promise<void>;
   onDeleteTodo: (id: string) => Promise<void>;
-  onNavigateTodo: () => void;
 }
 
-export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTodo, onNavigateTodo }: DashboardPageProps) {
+export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTodo }: DashboardPageProps) {
   const [quickTitle, setQuickTitle] = useState('');
   const todayTodos = todos.filter((todo) => isTodoForToday(todo));
   const routineTodos = todayTodos.filter((todo) => todo.source === 'routine' && todo.status !== 'done' && todo.status !== 'in_progress');
@@ -53,7 +52,6 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
           <span>오늘 진행</span>
           <strong>루틴 {routineDone}/{routineTotal || 5}</strong>
           <small>추가 {manualTodos.length}개</small>
-          <button type="button" className="secondary-button light-button" onClick={onNavigateTodo}>전체 업무 보기</button>
         </div>
       </section>
 

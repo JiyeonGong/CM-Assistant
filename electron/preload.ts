@@ -1,7 +1,8 @@
 import { clipboard, contextBridge, ipcRenderer } from 'electron';
 import type { AttendanceSummary } from '../src/types/attendance';
 import type { SavedQuickMessages } from '../src/types/appData';
-import type { CreateRoutineTemplateInput, CreateTodoInput, RoutineTemplate, TodoItem, UpdateRoutineTemplateInput, UpdateTodoInput } from '../src/types/todo';
+import type { CohortProfileSettings, CreateCohortProfileInput } from '../src/types/cohortProfile';
+import type { CreateTodoInput, TodoItem, UpdateTodoInput } from '../src/types/todo';
 
 const api = {
   selectExcelFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectExcelFile'),
@@ -14,12 +15,10 @@ const api = {
   createTodo: (input: CreateTodoInput): Promise<TodoItem> => ipcRenderer.invoke('todo:create', input),
   updateTodo: (input: UpdateTodoInput): Promise<TodoItem> => ipcRenderer.invoke('todo:update', input),
   deleteTodo: (id: string): Promise<void> => ipcRenderer.invoke('todo:delete', id),
-  listRoutineTemplates: (): Promise<RoutineTemplate[]> => ipcRenderer.invoke('routineTemplates:list'),
-  createRoutineTemplate: (input: CreateRoutineTemplateInput): Promise<RoutineTemplate> => ipcRenderer.invoke('routineTemplates:create', input),
-  updateRoutineTemplate: (input: UpdateRoutineTemplateInput): Promise<RoutineTemplate> => ipcRenderer.invoke('routineTemplates:update', input),
-  updateRoutineTemplateEnabled: (id: string, enabled: boolean): Promise<RoutineTemplate> =>
-    ipcRenderer.invoke('routineTemplates:updateEnabled', id, enabled),
-  deleteRoutineTemplate: (id: string): Promise<void> => ipcRenderer.invoke('routineTemplates:delete', id),
+  getCohortProfileSettings: (): Promise<CohortProfileSettings> => ipcRenderer.invoke('cohortProfiles:get'),
+  createCohortProfile: (input: CreateCohortProfileInput): Promise<CohortProfileSettings> => ipcRenderer.invoke('cohortProfiles:create', input),
+  selectCohortProfile: (id: string): Promise<CohortProfileSettings> => ipcRenderer.invoke('cohortProfiles:select', id),
+  deleteCohortProfile: (id: string): Promise<CohortProfileSettings> => ipcRenderer.invoke('cohortProfiles:delete', id),
   getSavedQuickMessages: (): Promise<SavedQuickMessages> => ipcRenderer.invoke('quickMessages:get'),
   saveQuickMessage: (key: keyof SavedQuickMessages, value: string): Promise<SavedQuickMessages> =>
     ipcRenderer.invoke('quickMessages:save', key, value),

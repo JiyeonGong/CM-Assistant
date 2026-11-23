@@ -7,13 +7,14 @@ import {
   generateSpotCheckResultMessage,
   QUICK_MESSAGE_TEMPLATES
 } from '../lib/quickMessages';
+import { formatCohortProfile } from '../lib/cohortProfiles';
 import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
 import type { SavedQuickMessages } from '../types/appData';
+import type { CohortProfile } from '../types/cohortProfile';
 import type { QuickMessageTemplate } from '../types/quickMessage';
 
 const MESSAGE_CATEGORIES = ['불시점검', '로그 대조', '강사 공유', '인사', '단위기간 종료'];
 const LOG_ATTENDANCE_TYPES = ['출석', '지각', '외출', '조퇴', '100분의50미만', '지각&외출', '외출&조퇴', '지각&조퇴', '외출&지각&조퇴'];
-const COHORT_COURSES = ['DA', 'FS', 'FESI', 'SB', 'PD', 'AI', 'IF'];
 
 type ToastType = 'success' | 'error' | 'warning';
 
@@ -22,8 +23,9 @@ type ToastMessage = {
   type: ToastType;
 };
 
-export default function QuickMessagesPage() {
+export default function QuickMessagesPage({ activeCohortProfile }: { activeCohortProfile: CohortProfile }) {
   const reportPanelRef = useRef<HTMLDivElement | null>(null);
+  const cohortName = formatCohortProfile(activeCohortProfile);
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [selectedTemplate, setSelectedTemplate] = useState<QuickMessageTemplate | null>(null);
   const [generatedMessage, setGeneratedMessage] = useState('');
@@ -44,8 +46,6 @@ export default function QuickMessagesPage() {
   const [logDate, setLogDate] = useState(getDateInputValue());
   const [logHrdTime, setLogHrdTime] = useState('');
   const [logZepTime, setLogZepTime] = useState('');
-  const [logResultCourse, setLogResultCourse] = useState(COHORT_COURSES[4]);
-  const [logResultCohortNumber, setLogResultCohortNumber] = useState('');
   const [logComparisonDraft, setLogComparisonDraft] = useState('');
   const [logComparisonResultDraft, setLogComparisonResultDraft] = useState('');
 
@@ -108,7 +108,7 @@ export default function QuickMessagesPage() {
     } else if (template.savedKey) {
       setGeneratedMessage(savedQuickMessages[template.savedKey] ?? template.template);
     } else {
-      setGeneratedMessage(getTemplateMessage(template));
+      setGeneratedMessage(getTemplateMessage(template, cohortName));
     }
     setToastMessage(null);
     window.requestAnimationFrame(() => {
@@ -126,7 +126,7 @@ export default function QuickMessagesPage() {
       setSpotCheckDiscordMessage(messages.discord);
       setSpotCheckZepMessage(messages.zep);
     } else {
-      setGeneratedMessage(getGeneratedMessage(selectedTemplate.generator));
+      setGeneratedMessage(getGeneratedMessage(selectedTemplate.generator, cohortName));
     }
     showToast('현재 시각 기준으로 문구를 갱신했습니다.', 'success');
   }
@@ -242,7 +242,7 @@ export default function QuickMessagesPage() {
     zepTime: logZepTime
   });
   const logTimeFieldLabels = getLogTimeFieldLabels(logAfterAttendanceType);
-  const logComparisonResultMessage = generateLogComparisonResultMessage(new Date(), formatCohortName(logResultCourse, logResultCohortNumber));
+  const logComparisonResultMessage = generateLogComparisonResultMessage(new Date(), cohortName);
 
   useEffect(() => {
     setLogComparisonDraft(logComparisonMessage);
@@ -251,6 +251,14 @@ export default function QuickMessagesPage() {
   useEffect(() => {
     setLogComparisonResultDraft(logComparisonResultMessage);
   }, [logComparisonResultMessage]);
+
+  useEffect(() => {
+    if (selectedTemplate?.generator === 'spotCheckResult') {
+      setGeneratedMessage(generateSpotCheckResultMessage(new Date(), cohortName));
+    } else if (selectedTemplate && !selectedTemplate.generator && !selectedTemplate.savedKey) {
+      setGeneratedMessage(getTemplateMessage(selectedTemplate, cohortName));
+    }
+  }, [cohortName, selectedTemplate]);
 
   return (
     <>
@@ -452,23 +460,9 @@ export default function QuickMessagesPage() {
             </div>
           ) : isLogComparisonResultTemplate ? (
             <section className="log-comparison-panel">
-              <div className="log-time-grid">
-                <label className="field-stack">
-                  <span>과정</span>
-                  <select className="text-input" value={logResultCourse} onChange={(event) => setLogResultCourse(event.target.value)}>
-                    {COHORT_COURSES.map((course) => <option value={course} key={course}>{course}</option>)}
-                  </select>
-                </label>
-                <label className="field-stack">
-                  <span>기수</span>
-                  <input
-                    className="text-input"
-                    value={logResultCohortNumber}
-                    onChange={(event) => setLogResultCohortNumber(event.target.value.replace(/\D/g, ''))}
-                    placeholder="예: 8"
-                    inputMode="numeric"
-                  />
-                </label>
+              <div className="selected-cohort-value compact">
+                <span>적용 과정·기수</span>
+                <strong>{cohortName}</strong>
               </div>
               <textarea className="report-output compact-output" value={logComparisonResultDraft} onChange={(event) => setLogComparisonResultDraft(event.target.value)} />
               <button type="button" className="copy-button" onClick={() => handleCopyText(logComparisonResultDraft, '로그 대조 결과')}>복사하기</button>
@@ -497,15 +491,15 @@ export default function QuickMessagesPage() {
   );
 }
 
-function getTemplateMessage(template: QuickMessageTemplate): string {
+function getTemplateMessage(template: QuickMessageTemplate, cohortName: string): string {
   if (template.generator) {
-    return getGeneratedMessage(template.generator);
+    return getGeneratedMessage(template.generator, cohortName);
   }
 
-  return template.template;
+  return template.template.replaceAll('과정명_n기', cohortName);
 }
 
-function getGeneratedMessage(generator: NonNullable<QuickMessageTemplate['generator']>): string {
+function getGeneratedMessage(generator: NonNullable<QuickMessageTemplate['generator']>, cohortName: string): string {
   if (generator === 'spotCheckNotice') {
     return generateSpotCheckNoticeMessage();
   }
@@ -519,15 +513,10 @@ function getGeneratedMessage(generator: NonNullable<QuickMessageTemplate['genera
   }
 
   if (generator === 'logComparisonResult') {
-    return generateLogComparisonResultMessage();
+    return generateLogComparisonResultMessage(new Date(), cohortName);
   }
 
-  return generateSpotCheckResultMessage();
-}
-
-function formatCohortName(course: string, cohortNumber: string): string {
-  const normalizedCohortNumber = cohortNumber.trim();
-  return normalizedCohortNumber ? `${course}_${normalizedCohortNumber}기` : `${course}_n기`;
+  return generateSpotCheckResultMessage(new Date(), cohortName);
 }
 
 function getRefreshButtonLabel(generator: NonNullable<QuickMessageTemplate['generator']>): string {
