@@ -217,6 +217,99 @@ button:disabled {
   padding: 18px 0;
 }
 
+.cohort-profile-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 20px 22px;
+  background: #f8f5ef;
+}
+
+.cohort-profile-heading {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cohort-profile-heading strong,
+.cohort-profile-heading span {
+  display: block;
+}
+
+.cohort-profile-heading span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.cohort-profile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cohort-profile-chip {
+  display: inline-flex;
+  overflow: hidden;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.cohort-profile-chip.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.cohort-profile-select,
+.cohort-profile-delete {
+  background: transparent;
+  color: inherit;
+  font-weight: 850;
+}
+
+.cohort-profile-select {
+  padding: 9px 6px 9px 14px;
+}
+
+.cohort-profile-delete {
+  min-width: 36px;
+  padding: 9px 12px 9px 6px;
+  color: var(--muted);
+}
+
+.cohort-profile-chip.active .cohort-profile-delete {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.cohort-profile-form {
+  display: grid;
+  grid-template-columns: 140px minmax(160px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.cohort-profile-loading {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.cohort-profile-error {
+  grid-column: auto;
+  flex: 1;
+}
+
+.cohort-profile-error-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .controls-panel {
   display: grid;
   grid-template-columns: 100px minmax(220px, 1fr) auto;
@@ -238,6 +331,28 @@ button:disabled {
 .field-label {
   color: var(--muted);
   font-weight: 800;
+}
+
+.selected-cohort-value {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  flex-direction: column;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--soft);
+}
+
+.selected-cohort-value span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.selected-cohort-value.compact {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .text-input {
@@ -704,314 +819,12 @@ button:disabled {
   color: var(--danger);
 }
 
-.todo-form {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) 120px 140px 150px minmax(180px, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.todo-board {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
 .summary-grid.five-columns {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .simple-hero {
   background: #16120d;
-}
-
-.todo-list-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
-  gap: 20px;
-}
-
-.todo-list-panel {
-  align-self: start;
-}
-
-.muted-panel {
-  background: #f8f5ef;
-}
-
-.split-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.split-heading > strong {
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: var(--soft);
-  color: var(--ink);
-}
-
-.todo-row-list {
-  display: grid;
-  gap: 0;
-}
-
-.scrollable-open-todos {
-  max-height: 390px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.scrollable-completed-todos {
-  max-height: 390px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.routine-manager-panel {
-  margin-top: 20px;
-}
-
-.routine-template-form {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.routine-template-list {
-  display: grid;
-  gap: 0;
-}
-
-.routine-template-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  padding: 15px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.routine-template-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.routine-template-edit-input {
-  width: min(360px, 100%);
-}
-
-.danger-button {
-  color: #b84a3a;
-}
-
-.routine-template-item:last-child {
-  border-bottom: 0;
-}
-
-.routine-template-item.disabled {
-  opacity: 0.55;
-}
-
-.routine-template-item strong,
-.routine-template-item span {
-  display: block;
-}
-
-.routine-template-item span {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.routine-template-message {
-  margin-top: 14px;
-}
-
-.calendar-panel {
-  margin-top: 20px;
-}
-
-.calendar-month-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.calendar-month-actions strong {
-  min-width: 112px;
-  text-align: center;
-}
-
-.calendar-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  align-items: start;
-  gap: 18px;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.calendar-weekday {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 900;
-  text-align: center;
-}
-
-.calendar-weekday.sunday,
-.calendar-day.sunday span {
-  color: #d64a3a;
-}
-
-.calendar-weekday.saturday,
-.calendar-day.saturday span {
-  color: #3366d6;
-}
-
-.calendar-day {
-  display: grid;
-  gap: 8px;
-  min-height: 82px;
-  padding: 11px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #fff;
-  color: var(--ink);
-  text-align: left;
-}
-
-.calendar-day span {
-  font-weight: 900;
-}
-
-.calendar-day-meta {
-  display: grid;
-  gap: 4px;
-}
-
-.calendar-day small {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 850;
-}
-
-.calendar-day small.event-count {
-  color: #7c5b16;
-}
-
-.calendar-day small.no-class-count {
-  color: #9b3a22;
-}
-
-.calendar-day small.holiday-count {
-  color: #c9372c;
-}
-
-.calendar-day small.leave-count {
-  color: #5c45ff;
-}
-
-.calendar-day.muted {
-  opacity: 0.38;
-}
-
-.calendar-day.today {
-  border-color: rgba(92, 69, 255, 0.48);
-}
-
-.calendar-day.has-schedule {
-  border-color: rgba(124, 91, 22, 0.24);
-  background: #fffaf0;
-}
-
-.calendar-day.selected {
-  border-color: var(--ink);
-  background: var(--soft);
-}
-
-.calendar-detail {
-  display: grid;
-  align-self: start;
-  align-content: start;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--soft);
-}
-
-.calendar-detail h3 {
-  margin: 0;
-}
-
-.calendar-detail-list {
-  display: grid;
-  gap: 10px;
-  max-height: 390px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.calendar-detail-item {
-  display: grid;
-  gap: 5px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.calendar-detail-item:last-child {
-  border-bottom: 0;
-}
-
-.calendar-detail-item span {
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 750;
-}
-
-.calendar-detail-item.schedule-event-item {
-  color: var(--ink);
-}
-
-.calendar-detail-item.no-class-item {
-  color: var(--ink);
-}
-
-.calendar-detail-item.holiday-item {
-  color: var(--ink);
-}
-
-.calendar-detail-item.leave-item {
-  color: var(--ink);
-}
-
-.calendar-detail-item.schedule-event-item span {
-  color: #7c5b16;
-}
-
-.calendar-detail-item.no-class-item span {
-  color: #9b3a22;
-}
-
-.calendar-detail-item.holiday-item span {
-  color: #c9372c;
-}
-
-.calendar-detail-item.leave-item span {
-  color: #5c45ff;
-}
-
-.calendar-detail-item.schedule-event-item .text-button {
-  padding: 7px 9px;
 }
 
 .quick-message-layout {
@@ -1264,138 +1077,6 @@ button:disabled {
   font-size: 1rem;
 }
 
-.todo-column {
-  min-height: 320px;
-}
-
-.todo-card-list {
-  display: grid;
-  gap: 10px;
-}
-
-.todo-card {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: #fff;
-}
-
-.todo-row {
-  grid-template-columns: 1fr;
-  align-items: center;
-  border-width: 0 0 1px;
-  border-radius: 0;
-  background: transparent;
-}
-
-.todo-row > div:first-child {
-  grid-column: auto;
-}
-
-.todo-row .todo-card-meta {
-  grid-column: auto;
-}
-
-.todo-row .todo-card-actions {
-  grid-column: auto;
-  justify-content: space-between;
-}
-
-.todo-card.priority-high {
-  border-color: var(--line);
-}
-
-.todo-card.priority-medium {
-  border-color: var(--line);
-}
-
-.todo-card.priority-low {
-  border-color: var(--line);
-}
-
-.todo-card strong {
-  color: var(--ink);
-}
-
-.todo-card p {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
-.todo-card-meta {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.todo-card-meta span {
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: var(--soft);
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.todo-card-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.todo-status-action,
-.todo-management-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.todo-management-actions {
-  margin-left: auto;
-}
-
-.todo-card-actions button,
-.todo-card-actions select {
-  white-space: nowrap;
-}
-
-.todo-card-actions select {
-  min-width: 110px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #fff;
-}
-
-.todo-card-actions .secondary-button,
-.todo-card-actions .primary-button,
-.todo-card-actions .text-button {
-  padding: 8px 10px;
-}
-
-.todo-edit-form {
-  display: grid;
-  gap: 10px;
-}
-
-.todo-edit-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.text-button {
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #fff0ed;
-  color: var(--danger);
-  font-weight: 800;
-}
-
 @media (max-width: 860px) {
   .app-shell {
     width: min(100% - 20px, 1120px);
@@ -1404,7 +1085,9 @@ button:disabled {
 
   .hero-card,
   .app-nav,
-  .file-row {
+  .file-row,
+  .cohort-profile-heading,
+  .cohort-profile-error-row {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1414,12 +1097,8 @@ button:disabled {
   .content-grid,
   .dashboard-grid,
   .quick-message-layout,
-  .calendar-layout,
   .quick-add-form,
-  .todo-form,
-  .routine-template-form,
-  .todo-board,
-  .todo-list-layout,
+  .cohort-profile-form,
   .button-row,
   .button-row.three-columns,
   .summary-grid,
@@ -1430,10 +1109,6 @@ button:disabled {
   .work-category-rail {
     margin: 12px 0 16px;
     border-radius: 18px;
-  }
-
-  .todo-row {
-    grid-template-columns: 1fr;
   }
 
   .hero-side-panel {
@@ -1458,28 +1133,4 @@ button:disabled {
     flex-direction: column;
   }
 
-  .routine-template-item {
-    grid-template-columns: 1fr;
-  }
-
-  .calendar-month-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .calendar-day {
-    min-height: 66px;
-    padding: 8px;
-  }
-
-  .calendar-day small {
-    font-size: 0.68rem;
-  }
-
-  .routine-template-actions,
-  .todo-card-actions,
-  .todo-edit-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
 }

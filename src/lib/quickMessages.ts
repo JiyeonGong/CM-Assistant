@@ -147,10 +147,11 @@ export function generateSpotCheckFollowUpMessage(date = new Date()): string {
 복귀시점은 이 DM에 주시는 답장을 기준으로 계산되니 복귀(젭 접속+얼굴 노출)하셨다면 꼭 답장 부탁드립니다.`;
 }
 
-export function generateSpotCheckResultMessage(date = new Date()): string {
+export function generateSpotCheckResultMessage(date = new Date(), cohortName = '0기'): string {
   const reportDate = `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}(${formatDayOfWeek(date)})`;
+  const displayCohortName = cohortName.trim() || '0기';
 
-  return `*[0기] ${reportDate} n교시 불시점검 공유* (@행정지원매니저 태그)
+  return `*[${displayCohortName}] ${reportDate} n교시 불시점검 공유* (@행정지원매니저 태그)
 - 점검 결과: 특이사항 00명`;
 }
 

@@ -2,8 +2,10 @@ import { app } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { COHORT_COURSES } from '../../src/lib/cohortProfiles';
 import type { SavedQuickMessages } from '../../src/types/appData';
-import type { CreateRoutineTemplateInput, CreateTodoInput, RoutineTemplate, TodoItem, TodoPriority, TodoStatus, UpdateRoutineTemplateInput, UpdateTodoInput } from '../../src/types/todo';
+import type { CohortProfile, CohortProfileSettings } from '../../src/types/cohortProfile';
+import type { CreateTodoInput, TodoItem, TodoPriority, TodoStatus, UpdateTodoInput } from '../../src/types/todo';
 
 const DEFAULT_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; category: string }> = [
   { title: '오전 출결 확인 및 QR스캔 독려', priority: 'high', category: '출결관리' },
@@ -14,19 +16,15 @@ const DEFAULT_ROUTINE_TODOS: Array<{ title: string; priority: TodoPriority; cate
 ];
 
 const DEFAULT_ROUTINE_TODO_TITLES = new Set(DEFAULT_ROUTINE_TODOS.map((todo) => todo.title));
-const LEGACY_ROUTINE_TODO_TITLES = new Set(['오전 출결 확인', '오전 출결 보고 공유', '오후 출결 확인', '오후 출결 보고 공유', '최종 출결 확인', '최종 확정 출결 공유']);
 
 interface AppData {
   todos: TodoItem[];
   quickMessages: SavedQuickMessages;
-  routineTemplates: RoutineTemplate[];
+  cohortProfiles: CohortProfile[];
+  activeCohortProfileId: string;
 }
 
-const DEFAULT_DATA: AppData = {
-  todos: [],
-  quickMessages: {},
-  routineTemplates: createDefaultRoutineTemplates()
-};
+let cohortProfileMutationQueue: Promise<void> = Promise.resolve();
 
 function getDataFilePath(): string {
   return join(app.getPath('userData'), 'cm-assistant-data.json');
@@ -37,29 +35,19 @@ export async function listTodos(): Promise<TodoItem[]> {
   return sortTodos(data.todos);
 }
 
-export async function listTodosByDate(date: string): Promise<TodoItem[]> {
-  const todos = await listTodos();
-  return todos.filter((todo) => {
-    if (todo.status === 'done') return false;
-    if (todo.source === 'routine') return todo.dueDate === date;
-    return !todo.dueDate || todo.dueDate <= date;
-  });
-}
-
 export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
   const data = await readData();
   const today = getTodayString();
   const now = new Date().toISOString();
   let hasChanges = false;
   const seenTodayRoutineTitles = new Set<string>();
-  const routineTemplates = sortRoutineTemplates(data.routineTemplates);
 
   const cleanedTodos = data.todos.filter((todo) => {
     if (todo.source !== 'routine' || todo.dueDate !== today) {
       return true;
     }
 
-    if (LEGACY_ROUTINE_TODO_TITLES.has(todo.title) || seenTodayRoutineTitles.has(todo.title)) {
+    if (!DEFAULT_ROUTINE_TODO_TITLES.has(todo.title) || seenTodayRoutineTitles.has(todo.title)) {
       hasChanges = true;
       return false;
     }
@@ -70,11 +58,7 @@ export async function ensureTodayRoutineTodos(): Promise<TodoItem[]> {
 
   data.todos = cleanedTodos;
 
-  for (const routine of routineTemplates) {
-    if (!routine.enabled || routine.startsOn > today) {
-      continue;
-    }
-
+  for (const routine of DEFAULT_ROUTINE_TODOS) {
     const exists = data.todos.some((todo) => todo.source === 'routine' && todo.dueDate === today && todo.title === routine.title);
     if (exists) {
       continue;
@@ -163,73 +147,70 @@ export async function deleteTodo(id: string): Promise<void> {
   await writeData(data);
 }
 
-export async function listRoutineTemplates(): Promise<RoutineTemplate[]> {
+export async function getCohortProfileSettings(): Promise<CohortProfileSettings> {
+  await cohortProfileMutationQueue;
   const data = await readData();
-  return sortRoutineTemplates(data.routineTemplates);
+  return pickCohortProfileSettings(data);
 }
 
-export async function createRoutineTemplate(input: CreateRoutineTemplateInput): Promise<RoutineTemplate> {
-  const title = input.title.trim();
-  if (!title) {
-    throw new Error('루틴 제목을 입력해주세요.');
-  }
+export function createCohortProfile(input: unknown): Promise<CohortProfileSettings> {
+  return enqueueCohortProfileMutation(async () => {
+    const { course, cohortNumber } = parseCohortProfileInput(input);
+    const data = await readData();
+    const duplicate = data.cohortProfiles.some((profile) => profile.course === course && profile.cohortNumber === cohortNumber);
+    if (duplicate) {
+      throw new Error('이미 등록된 과정·기수입니다.');
+    }
 
-  const data = await readData();
-  const now = new Date().toISOString();
-  const template: RoutineTemplate = {
-    id: randomUUID(),
-    title,
-    priority: input.priority ?? 'medium',
-    category: cleanOptional(input.category) ?? '내 루틴',
-    enabled: true,
-    order: getNextRoutineOrder(data.routineTemplates),
-    startsOn: getTomorrowString(),
-    createdAt: now,
-    updatedAt: now
-  };
-
-  data.routineTemplates.push(template);
-  await writeData(data);
-  return template;
+    const now = new Date().toISOString();
+    const profile: CohortProfile = {
+      id: randomUUID(),
+      course,
+      cohortNumber,
+      createdAt: now,
+      updatedAt: now
+    };
+    data.cohortProfiles.push(profile);
+    data.activeCohortProfileId = profile.id;
+    await writeData(data);
+    return pickCohortProfileSettings(data);
+  });
 }
 
-export async function updateRoutineTemplateEnabled(id: string, enabled: boolean): Promise<RoutineTemplate> {
-  return updateRoutineTemplate({ id, enabled });
+export function selectCohortProfile(id: unknown): Promise<CohortProfileSettings> {
+  return enqueueCohortProfileMutation(async () => {
+    const profileId = parseCohortProfileId(id);
+    const data = await readData();
+    if (!data.cohortProfiles.some((profile) => profile.id === profileId)) {
+      throw new Error('선택할 과정·기수를 찾지 못했습니다.');
+    }
+
+    data.activeCohortProfileId = profileId;
+    await writeData(data);
+    return pickCohortProfileSettings(data);
+  });
 }
 
-export async function updateRoutineTemplate(input: UpdateRoutineTemplateInput): Promise<RoutineTemplate> {
-  const data = await readData();
-  const index = data.routineTemplates.findIndex((template) => template.id === input.id);
-  if (index === -1) {
-    throw new Error('수정할 루틴을 찾지 못했습니다.');
-  }
+export function deleteCohortProfile(id: unknown): Promise<CohortProfileSettings> {
+  return enqueueCohortProfileMutation(async () => {
+    const profileId = parseCohortProfileId(id);
+    const data = await readData();
+    if (data.cohortProfiles.length === 1) {
+      throw new Error('과정·기수는 최소 1개 이상 필요합니다.');
+    }
 
-  const title = input.title !== undefined ? input.title.trim() : data.routineTemplates[index].title;
-  if (!title) {
-    throw new Error('루틴 제목을 입력해주세요.');
-  }
+    const nextProfiles = data.cohortProfiles.filter((profile) => profile.id !== profileId);
+    if (nextProfiles.length === data.cohortProfiles.length) {
+      throw new Error('삭제할 과정·기수를 찾지 못했습니다.');
+    }
 
-  const updated: RoutineTemplate = {
-    ...data.routineTemplates[index],
-    title,
-    enabled: input.enabled ?? data.routineTemplates[index].enabled,
-    updatedAt: new Date().toISOString()
-  };
-
-  data.routineTemplates[index] = updated;
-  await writeData(data);
-  return updated;
-}
-
-export async function deleteRoutineTemplate(id: string): Promise<void> {
-  const data = await readData();
-  const nextTemplates = data.routineTemplates.filter((template) => template.id !== id);
-  if (nextTemplates.length === data.routineTemplates.length) {
-    throw new Error('삭제할 루틴을 찾지 못했습니다.');
-  }
-
-  data.routineTemplates = nextTemplates;
-  await writeData(data);
+    data.cohortProfiles = nextProfiles;
+    if (data.activeCohortProfileId === profileId) {
+      data.activeCohortProfileId = nextProfiles[0].id;
+    }
+    await writeData(data);
+    return pickCohortProfileSettings(data);
+  });
 }
 
 export async function getSavedQuickMessages(): Promise<SavedQuickMessages> {
@@ -265,15 +246,21 @@ async function readData(): Promise<AppData> {
   try {
     const raw = await readFile(filePath, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<AppData>;
+    const cohortProfiles = normalizeCohortProfiles(parsed.cohortProfiles);
+    const activeCohortProfileId = cohortProfiles.some((profile) => profile.id === parsed.activeCohortProfileId)
+      ? parsed.activeCohortProfileId as string
+      : cohortProfiles[0].id;
     return {
       todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : [],
       quickMessages: parsed.quickMessages ?? {},
-      routineTemplates: normalizeRoutineTemplates(parsed.routineTemplates)
+      cohortProfiles,
+      activeCohortProfileId
     };
   } catch (error) {
     if (isFileMissingError(error)) {
-      await writeData(DEFAULT_DATA);
-      return { ...DEFAULT_DATA };
+      const defaultData = createDefaultData();
+      await writeData(defaultData);
+      return defaultData;
     }
 
     throw error;
@@ -338,51 +325,87 @@ function getRoutineOrder(todo: TodoItem): number {
   return defaultRoutineIndex === -1 ? Number.MAX_SAFE_INTEGER : defaultRoutineIndex;
 }
 
-function createDefaultRoutineTemplates(): RoutineTemplate[] {
-  const now = new Date().toISOString();
-  const today = getTodayString();
-  return DEFAULT_ROUTINE_TODOS.map((routine, index) => ({
-    id: `default-routine-${index}`,
-    title: routine.title,
-    priority: routine.priority,
-    category: routine.category,
-    enabled: true,
-    order: index,
-    startsOn: today,
-    createdAt: now,
-    updatedAt: now
-  }));
-}
-
-function normalizeRoutineTemplates(value: unknown): RoutineTemplate[] {
-  if (!Array.isArray(value) || value.length === 0) {
-    return createDefaultRoutineTemplates();
-  }
-
-  return sortRoutineTemplates(value.map((template, index) => normalizeRoutineTemplate(template as Partial<RoutineTemplate>, index)));
-}
-
-function normalizeRoutineTemplate(template: Partial<RoutineTemplate>, index: number): RoutineTemplate {
+function createDefaultCohortProfile(): CohortProfile {
   const now = new Date().toISOString();
   return {
-    id: template.id ?? randomUUID(),
-    title: template.title?.trim() || `루틴 ${index + 1}`,
-    priority: template.priority ?? 'medium',
-    category: cleanOptional(template.category),
-    enabled: template.enabled ?? true,
-    order: template.order ?? index,
-    startsOn: template.startsOn ?? getTodayString(),
-    createdAt: template.createdAt ?? now,
-    updatedAt: template.updatedAt ?? now
+    id: 'default-cohort-pd-8',
+    course: 'PD',
+    cohortNumber: '8',
+    createdAt: now,
+    updatedAt: now
   };
 }
 
-function sortRoutineTemplates(templates: RoutineTemplate[]): RoutineTemplate[] {
-  return [...templates].sort((a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt));
+function createDefaultData(): AppData {
+  const cohortProfile = createDefaultCohortProfile();
+  return {
+    todos: [],
+    quickMessages: {},
+    cohortProfiles: [cohortProfile],
+    activeCohortProfileId: cohortProfile.id
+  };
 }
 
-function getNextRoutineOrder(templates: RoutineTemplate[]): number {
-  return templates.reduce((maxOrder, template) => Math.max(maxOrder, template.order), -1) + 1;
+function parseCohortProfileInput(input: unknown): { course: string; cohortNumber: string } {
+  if (typeof input !== 'object' || input === null || !('course' in input) || !('cohortNumber' in input)) {
+    throw new Error('과정과 기수 입력값이 올바르지 않습니다.');
+  }
+
+  const course = typeof input.course === 'string' ? input.course.trim().toUpperCase() : '';
+  const cohortNumber = typeof input.cohortNumber === 'string' ? input.cohortNumber.trim() : '';
+  if (!COHORT_COURSES.includes(course) || !/^\d+$/.test(cohortNumber)) {
+    throw new Error('지원 과정과 숫자로 된 기수를 입력해주세요.');
+  }
+
+  return { course, cohortNumber };
+}
+
+function parseCohortProfileId(id: unknown): string {
+  if (typeof id !== 'string' || !id.trim()) {
+    throw new Error('과정·기수 식별값이 올바르지 않습니다.');
+  }
+  return id;
+}
+
+function enqueueCohortProfileMutation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = cohortProfileMutationQueue.then(operation, operation);
+  cohortProfileMutationQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+function normalizeCohortProfiles(value: unknown): CohortProfile[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return [createDefaultCohortProfile()];
+  }
+
+  const profiles = value
+    .map((profile) => normalizeCohortProfile(profile as Partial<CohortProfile>))
+    .filter((profile): profile is CohortProfile => Boolean(profile));
+  return profiles.length > 0 ? profiles : [createDefaultCohortProfile()];
+}
+
+function normalizeCohortProfile(profile: Partial<CohortProfile>): CohortProfile | null {
+  const course = profile.course?.trim().toUpperCase();
+  const cohortNumber = profile.cohortNumber?.trim();
+  if (!course || !cohortNumber || !/^\d+$/.test(cohortNumber)) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  return {
+    id: profile.id ?? randomUUID(),
+    course,
+    cohortNumber,
+    createdAt: profile.createdAt ?? now,
+    updatedAt: profile.updatedAt ?? now
+  };
+}
+
+function pickCohortProfileSettings(data: AppData): CohortProfileSettings {
+  return {
+    profiles: data.cohortProfiles,
+    activeProfileId: data.activeCohortProfileId
+  };
 }
 
 function normalizeTodo(todo: TodoItem): TodoItem {
@@ -397,12 +420,6 @@ function normalizeTodo(todo: TodoItem): TodoItem {
 
 function getTodayString(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function getTomorrowString(date = new Date()): string {
-  const tomorrow = new Date(date);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return getTodayString(tomorrow);
 }
 
 function isFileMissingError(error: unknown): boolean {
