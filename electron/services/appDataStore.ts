@@ -12,6 +12,7 @@ interface AppData {
   quickMessages: SavedQuickMessages;
   cohortProfiles: CohortProfile[];
   activeCohortProfileId: string;
+  memo: string;
 }
 
 let cohortProfileMutationQueue: Promise<void> = Promise.resolve();
@@ -85,6 +86,22 @@ export async function deleteTodo(id: string): Promise<void> {
   const data = await readData();
   data.todos = data.todos.filter((todo) => todo.id !== id);
   await writeData(data);
+}
+
+export async function getMemo(): Promise<string> {
+  const data = await readData();
+  return data.memo;
+}
+
+export async function saveMemo(value: unknown): Promise<string> {
+  if (typeof value !== 'string') {
+    throw new Error('메모 내용이 올바르지 않습니다.');
+  }
+
+  const data = await readData();
+  data.memo = value;
+  await writeData(data);
+  return data.memo;
 }
 
 export async function getCohortProfileSettings(): Promise<CohortProfileSettings> {
@@ -194,7 +211,8 @@ async function readData(): Promise<AppData> {
       todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo).filter((todo): todo is TodoItem => Boolean(todo)) : [],
       quickMessages: parsed.quickMessages ?? {},
       cohortProfiles,
-      activeCohortProfileId
+      activeCohortProfileId,
+      memo: typeof parsed.memo === 'string' ? parsed.memo : ''
     };
   } catch (error) {
     if (isFileMissingError(error)) {
@@ -270,7 +288,8 @@ function createDefaultData(): AppData {
     todos: [],
     quickMessages: {},
     cohortProfiles: [cohortProfile],
-    activeCohortProfileId: cohortProfile.id
+    activeCohortProfileId: cohortProfile.id,
+    memo: ''
   };
 }
 

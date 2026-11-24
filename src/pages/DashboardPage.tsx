@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { TodoItem, UpdateTodoInput } from '../types/todo';
 import type { CreateTodoInput } from '../types/todo';
-import { getKoreanDateText, getTodoStats, isCompletedToday, isTodoForToday, TODO_STATUS_LABELS } from '../lib/todo';
+import { getKoreanDateText, isCompletedToday, isTodoForToday, TODO_STATUS_LABELS } from '../lib/todo';
 
 interface DashboardPageProps {
   todos: TodoItem[];
@@ -12,13 +12,42 @@ interface DashboardPageProps {
 
 export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDeleteTodo }: DashboardPageProps) {
   const [quickTitle, setQuickTitle] = useState('');
+  const [memo, setMemo] = useState('');
+  const [savedMemo, setSavedMemo] = useState('');
+  const [memoNotice, setMemoNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
   const todayTodos = todos.filter((todo) => isTodoForToday(todo));
-  const pendingTodos = todayTodos.filter((todo) => todo.status !== 'done' && todo.status !== 'in_progress');
   const completedToday = todos.filter((todo) => isCompletedToday(todo));
-  const dashboardStatsTodos = todos.filter((todo) => isTodoForToday(todo) || isCompletedToday(todo));
-  const stats = getTodoStats(dashboardStatsTodos);
-  const activeTodos = todayTodos.filter((todo) => todo.status === 'in_progress');
-  const nextTodo = activeTodos[0] ?? pendingTodos[0];
+  const activeTodo = todayTodos.find((todo) => todo.status === 'in_progress');
+  const nextTodo = activeTodo ?? todayTodos[0];
+
+  useEffect(() => {
+    void loadMemo();
+  }, []);
+
+  async function loadMemo(): Promise<void> {
+    try {
+      const storedMemo = await window.cmAssistant.getMemo();
+      setMemo(storedMemo);
+      setSavedMemo(storedMemo);
+    } catch (error) {
+      setMemoNotice({ text: error instanceof Error ? error.message : '메모를 불러오지 못했습니다.', type: 'error' });
+    }
+  }
+
+  async function handleSaveMemo(): Promise<void> {
+    setIsSavingMemo(true);
+    setMemoNotice(null);
+    try {
+      const storedMemo = await window.cmAssistant.saveMemo(memo);
+      setSavedMemo(storedMemo);
+      setMemoNotice({ text: '저장됨', type: 'success' });
+    } catch (error) {
+      setMemoNotice({ text: error instanceof Error ? error.message : '메모를 저장하지 못했습니다.', type: 'error' });
+    } finally {
+      setIsSavingMemo(false);
+    }
+  }
 
   async function handleQuickAdd(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -45,7 +74,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
         </div>
         <div className="hero-side-panel">
           <span>오늘 진행</span>
-          <strong>할 일 {pendingTodos.length}개</strong>
+          <strong>할 일 {todayTodos.length}개</strong>
           <small>완료 {completedToday.length}개</small>
         </div>
       </section>
@@ -64,16 +93,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
             <h2>오늘 할 일</h2>
             <p>오늘 처리할 업무를 한곳에서 확인합니다.</p>
           </div>
-          <TodoPreviewList todos={pendingTodos} emptyText="오늘 할 일이 없습니다." mode="pending" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
-        </div>
-
-        <div className="panel">
-          <div className="section-heading">
-            <p className="eyebrow">Progress</p>
-            <h2>진행 중</h2>
-            <p>지금 집중할 업무입니다.</p>
-          </div>
-          <TodoPreviewList todos={activeTodos} emptyText="진행 중인 업무가 없습니다." mode="active" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
+          <TodoPreviewList todos={todayTodos} emptyText="오늘 할 일이 없습니다." mode="today" scrollable onUpdateTodo={onUpdateTodo} onDeleteTodo={onDeleteTodo} />
         </div>
 
         <div className="panel">
@@ -87,15 +107,26 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
 
         <div className="panel dashboard-wide-panel">
           <div className="section-heading">
-            <p className="eyebrow">Stats</p>
-            <h2>전체 상태</h2>
+            <p className="eyebrow">Memo</p>
+            <h2>간단 메모</h2>
+            <p>업무 중 기억할 내용을 자유롭게 적어두세요.</p>
           </div>
-          <div className="summary-grid five-columns">
-            <StatItem label="전체" value={`${stats.total}개`} />
-            <StatItem label="진행 전" value={`${stats.todo}개`} />
-            <StatItem label="진행 중" value={`${stats.inProgress}개`} />
-            <StatItem label="완료" value={`${stats.done}개`} />
-            <StatItem label="보류" value={`${stats.hold}개`} />
+          <textarea
+            className="memo-textarea"
+            value={memo}
+            onChange={(event) => {
+              setMemo(event.target.value);
+              setMemoNotice(null);
+            }}
+            placeholder="메모를 입력하세요."
+          />
+          <div className="memo-actions">
+            <span className={memoNotice?.type === 'error' ? 'memo-status error' : 'memo-status'} role="status">
+              {memoNotice?.text ?? ''}
+            </span>
+            <button type="button" className="primary-button" onClick={() => void handleSaveMemo()} disabled={isSavingMemo || memo === savedMemo}>
+              {isSavingMemo ? '저장 중...' : '저장'}
+            </button>
           </div>
         </div>
       </section>
@@ -103,7 +134,7 @@ export default function DashboardPage({ todos, onCreateTodo, onUpdateTodo, onDel
   );
 }
 
-type TodoPreviewMode = 'pending' | 'active' | 'readonly';
+type TodoPreviewMode = 'today' | 'readonly';
 
 interface TodoPreviewActions {
   onUpdateTodo: (id: string, input: Omit<UpdateTodoInput, 'id'>) => Promise<void>;
@@ -130,21 +161,21 @@ function TodoPreviewItem({ todo, mode, onUpdateTodo, onDeleteTodo }: { todo: Tod
         <span>{formatTodoMeta(todo)}</span>
       </div>
       <div className="todo-preview-actions">
-        {mode !== 'readonly' && mode !== 'active' && (
-          <button type="button" className="mini-button" onClick={() => onUpdateTodo(todo.id, { status: 'in_progress' })}>진행</button>
+        {mode === 'today' && (
+          <>
+            <label className="todo-progress-toggle">
+              <input
+                type="checkbox"
+                checked={todo.status === 'in_progress'}
+                onChange={(event) => onUpdateTodo(todo.id, { status: event.target.checked ? 'in_progress' : 'todo' })}
+              />
+              <span>진행 중</span>
+            </label>
+            <button type="button" className="mini-button" onClick={() => onUpdateTodo(todo.id, { status: 'done' })}>완료</button>
+            <button type="button" className="icon-button" aria-label={`${todo.title} 삭제`} onClick={() => onDeleteTodo(todo.id)}>×</button>
+          </>
         )}
-        {mode === 'active' && <button type="button" className="mini-button" onClick={() => onUpdateTodo(todo.id, { status: 'done' })}>완료</button>}
-        {mode === 'pending' && <button type="button" className="icon-button" aria-label={`${todo.title} 삭제`} onClick={() => onDeleteTodo(todo.id)}>×</button>}
       </div>
-    </div>
-  );
-}
-
-function StatItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="summary-item">
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   QUICK_MESSAGE_TEMPLATES
 } from '../lib/quickMessages';
 import { formatCohortProfile } from '../lib/cohortProfiles';
-import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
+import { createSlackClipboardContent } from '../lib/slackClipboard';
 import type { SavedQuickMessages } from '../types/appData';
 import type { CohortProfile } from '../types/cohortProfile';
 import type { QuickMessageTemplate } from '../types/quickMessage';
@@ -137,7 +137,8 @@ export default function QuickMessagesPage({ activeCohortProfile }: { activeCohor
       return;
     }
 
-    window.cmAssistant.copyReport(text, convertSlackMarkdownToClipboardHtml(text));
+    const clipboardContent = createSlackClipboardContent(text);
+    window.cmAssistant.copyReport(clipboardContent.text, clipboardContent.html);
     showToast(`${label} 복사되었습니다.`, 'success');
   }
 
@@ -150,7 +151,8 @@ export default function QuickMessagesPage({ activeCohortProfile }: { activeCohor
     if (selectedTemplate?.copyMode === 'plainText') {
       window.cmAssistant.copyText(generatedMessage);
     } else {
-      window.cmAssistant.copyReport(generatedMessage, convertSlackMarkdownToClipboardHtml(generatedMessage));
+      const clipboardContent = createSlackClipboardContent(generatedMessage);
+      window.cmAssistant.copyReport(clipboardContent.text, clipboardContent.html);
     }
     showToast('복사되었습니다.', 'success');
   }

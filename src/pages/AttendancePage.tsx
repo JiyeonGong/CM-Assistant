@@ -8,7 +8,7 @@ import {
   generateMorningAttendanceTemplate
 } from '../lib/reportTemplates';
 import { formatCohortProfile } from '../lib/cohortProfiles';
-import { convertSlackMarkdownToClipboardHtml } from '../lib/slackClipboard';
+import { createSlackClipboardContent } from '../lib/slackClipboard';
 import type { AttendanceSummary } from '../types/attendance';
 import type { CohortProfile } from '../types/cohortProfile';
 
@@ -121,7 +121,8 @@ export default function AttendancePage({ activeCohortProfile }: { activeCohortPr
       return;
     }
 
-    window.cmAssistant.copyReport(generatedReport, convertSlackMarkdownToClipboardHtml(generatedReport));
+    const clipboardContent = createSlackClipboardContent(generatedReport);
+    window.cmAssistant.copyReport(clipboardContent.text, clipboardContent.html);
     setToastMessage({ type: 'success', text: '복사되었습니다. Slack에 붙여넣으면 마크다운이 함께 적용됩니다.' });
   }
 

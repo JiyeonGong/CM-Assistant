@@ -7,8 +7,10 @@ import {
   deleteCohortProfile,
   deleteTodo,
   getCohortProfileSettings,
+  getMemo,
   getSavedQuickMessages,
   listTodos,
+  saveMemo,
   saveQuickMessage,
   selectCohortProfile,
   updateTodo
@@ -74,6 +76,8 @@ app.whenReady().then(() => {
   ipcMain.handle('todo:create', async (_event, input) => runDataOperation(() => createTodo(input)));
   ipcMain.handle('todo:update', async (_event, input) => runDataOperation(() => updateTodo(input)));
   ipcMain.handle('todo:delete', async (_event, id: string) => runDataOperation(() => deleteTodo(id)));
+  ipcMain.handle('memo:get', async () => runDataOperation(getMemo));
+  ipcMain.handle('memo:save', async (_event, value: unknown) => runDataOperation(() => saveMemo(value)));
   ipcMain.handle('cohortProfiles:get', async () => runDataOperation(getCohortProfileSettings));
   ipcMain.handle('cohortProfiles:create', async (_event, input: unknown) => runDataOperation(() => createCohortProfile(input)));
   ipcMain.handle('cohortProfiles:select', async (_event, id: unknown) => runDataOperation(() => selectCohortProfile(id)));
