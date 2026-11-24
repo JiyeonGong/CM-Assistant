@@ -4,10 +4,10 @@ export function generateMorningAttendanceTemplate(cohortName: string, date = new
   const { dateText, dayOfWeek } = formatReportDate(date);
 
   return [
-    `*[${cohortName}] ${dateText}(${dayOfWeek}) 오전 출결 현황 공유*`,
-    '- *출석:* 0명 (전체: 0명)',
-    '- *지각/미입실:* 0명',
-    '- *휴공가:* 0명'
+    `**[${cohortName}] ${dateText}(${dayOfWeek}) 오전 출결 현황 공유**`,
+    '- **출석:** 0명 (전체: 0명)',
+    '- **지각/미입실:** 0명',
+    '- **휴공가:** 0명'
   ].join('\n');
 }
 
@@ -15,10 +15,10 @@ export function generateAfternoonAttendanceTemplate(cohortName: string, date = n
   const { dateText, dayOfWeek } = formatReportDate(date);
 
   return [
-    `*[${cohortName}] ${dateText}일(${dayOfWeek}) 오후 출결 현황 공유*`,
-    '- *Zep 접속자:* 0명',
-    '- *외출:* 0명',
-    '- *추가 휴공가:* 0명'
+    `**[${cohortName}] ${dateText}일(${dayOfWeek}) 오후 출결 현황 공유**`,
+    '- **Zep 접속자:** 0명',
+    '- **외출:** 0명',
+    '- **추가 휴공가:** 0명'
   ].join('\n');
 }
 
@@ -26,16 +26,16 @@ export function generateFinalAttendanceTemplate(cohortName: string, date = new D
   const { dateText, dayOfWeek } = formatReportDate(date);
 
   return [
-    `*[${cohortName}] ${dateText}(${dayOfWeek}) 최종 확정 출결 공유*`,
-    '- *출석:* 0명(전체 0명)',
-    '- *퇴실 QR 미촬영:* 0명',
-    '- *지각/외출/조퇴:* 0명',
+    `**[${cohortName}] ${dateText}(${dayOfWeek}) 최종 확정 출결 공유**`,
+    '- **출석:** 0명(전체 0명)',
+    '- **퇴실 QR 미촬영:** 0명',
+    '- **지각/외출/조퇴:** 0명',
     '',
-    '- *결석:* 0명',
+    '- **결석:** 0명',
     '',
-    '- *출석입력요청 검토 결과*',
-    '  - *검토 대상:* 0건',
-    '  - *검토 결과:* 오류 수정 후 재검토 완료'
+    '- **출석입력요청 검토 결과**',
+    '    - **검토 대상:** 0건',
+    '    - **검토 결과:** 오류 수정 후 재검토 완료'
   ].join('\n');
 }
 
@@ -44,11 +44,11 @@ export function generateMorningAttendanceReport(summary: AttendanceSummary): str
   const morningPresentCount = Math.max(summary.totalCount - lateOrMissingPeople.length, 0);
 
   return [
-    `*[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 오전 출결 현황 공유*`,
-    `- *출석:* ${morningPresentCount}명 (전체: ${summary.totalCount}명)`,
-    `- *지각/미입실:* ${lateOrMissingPeople.length}명`,
+    `**[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 오전 출결 현황 공유**`,
+    `- **출석:** ${morningPresentCount}명 (전체: ${summary.totalCount}명)`,
+    `- **지각/미입실:** ${lateOrMissingPeople.length}명`,
     formatNestedPeopleLines(lateOrMissingPeople),
-    `- *휴공가:* ${summary.officialLeaveCount}명`,
+    `- **휴공가:** ${summary.officialLeaveCount}명`,
     formatOfficialLeaveLines(summary.officialLeavePeople)
   ]
     .filter(Boolean)
@@ -59,11 +59,11 @@ export function generateAfternoonAttendanceReport(summary: AttendanceSummary): s
   const zepConnectionCount = Math.max(summary.totalCount - summary.qrMissingCount, 0);
 
   return [
-    `*[${summary.cohortName}] ${summary.date}일(${summary.dayOfWeek}) 오후 출결 현황 공유*`,
-    `- *Zep 접속자:* ${zepConnectionCount}명`,
-    `- *외출:* ${summary.outingCount}명`,
+    `**[${summary.cohortName}] ${summary.date}일(${summary.dayOfWeek}) 오후 출결 현황 공유**`,
+    `- **Zep 접속자:** ${zepConnectionCount}명`,
+    `- **외출:** ${summary.outingCount}명`,
     formatOutingLines(summary.outingPeople),
-    '- *추가 휴공가:* 0명'
+    '- **추가 휴공가:** 0명'
   ]
     .filter(Boolean)
     .join('\n');
@@ -81,18 +81,18 @@ export function generateFinalAttendanceReport(summary: AttendanceSummary): strin
   const finalPresentCount = Math.max(summary.totalCount - countUniquePeople([...exceptionPeople, ...finalAbsentPeople]), 0);
 
   return [
-    `*[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 최종 확정 출결 공유*`,
-    `- *출석:* ${finalPresentCount}명(전체 ${summary.totalCount}명)`,
-    `- *퇴실 QR 미촬영:* ${qrMissingPeople.length}명${formatPeopleInline(qrMissingPeople)}`,
-    `- *지각/외출/조퇴:* ${exceptionCount}명`,
+    `**[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 최종 확정 출결 공유**`,
+    `- **출석:** ${finalPresentCount}명(전체 ${summary.totalCount}명)`,
+    `- **퇴실 QR 미촬영:** ${qrMissingPeople.length}명${formatPeopleInline(qrMissingPeople)}`,
+    `- **지각/외출/조퇴:** ${exceptionCount}명`,
     formatNestedPeopleLines(exceptionPeople),
     '',
-    `- *결석:* ${finalAbsentPeople.length}명`,
+    `- **결석:** ${finalAbsentPeople.length}명`,
     formatNestedPeopleLines(finalAbsentDisplayPeople),
     '',
-    '- *출석입력요청 검토 결과*',
-    '  - *검토 대상:* 0건',
-    '  - *검토 결과:* 오류 수정 후 재검토 완료'
+    '- **출석입력요청 검토 결과**',
+    '    - **검토 대상:** 0건',
+    '    - **검토 결과:** 오류 수정 후 재검토 완료'
   ].join('\n');
 }
 
@@ -134,7 +134,7 @@ function formatOfficialLeaveLines(people: PersonNote[]): string {
   }
 
   return people
-    .map((person) => `  - ${person.name}${person.note ? `(${person.note})` : ''}`)
+    .map((person) => `    - ${person.name}${person.note ? `(${person.note})` : ''}`)
     .join('\n');
 }
 
@@ -144,7 +144,7 @@ function formatOutingLines(people: PersonTimeNote[]): string {
   }
 
   return people
-    .map((person) => `  - ${person.name}${person.time ? ` ${person.time}` : ''}`)
+    .map((person) => `    - ${person.name}${person.time ? ` ${person.time}` : ''}`)
     .join('\n');
 }
 
@@ -170,7 +170,7 @@ function formatNestedPeopleLines(people: Array<PersonNote | PersonTimeNote>): st
 
   return lines
     .split('\n')
-    .map((line) => `  - ${line}`)
+    .map((line) => `    - ${line}`)
     .join('\n');
 }
 

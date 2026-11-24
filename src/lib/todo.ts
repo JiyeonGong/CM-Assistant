@@ -1,4 +1,4 @@
-import type { TodoItem, TodoStats, TodoStatus } from '../types/todo';
+import type { TodoItem, TodoStatus } from '../types/todo';
 
 export const TODO_STATUS_LABELS: Record<TodoStatus, string> = {
   todo: '진행 전',
@@ -14,16 +14,6 @@ export function getTodayString(date = new Date()): string {
 export function getKoreanDateText(date = new Date()): string {
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
-}
-
-export function getTodoStats(todos: TodoItem[]): TodoStats {
-  return {
-    total: todos.length,
-    todo: todos.filter((todo) => todo.status === 'todo').length,
-    inProgress: todos.filter((todo) => todo.status === 'in_progress').length,
-    done: todos.filter((todo) => todo.status === 'done').length,
-    hold: todos.filter((todo) => todo.status === 'hold').length
-  };
 }
 
 export function isTodoForToday(todo: TodoItem, today = getTodayString()): boolean {

@@ -792,6 +792,57 @@ button:disabled {
   display: flex;
   gap: 6px;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.todo-progress-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.todo-progress-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.memo-textarea {
+  width: 100%;
+  min-height: 150px;
+  margin-top: 16px;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  resize: vertical;
+  background: #fff;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.memo-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.memo-status {
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.memo-status.error {
+  color: var(--danger);
 }
 
 .mini-button,
@@ -811,10 +862,6 @@ button:disabled {
 .icon-button {
   background: #fff0ed;
   color: var(--danger);
-}
-
-.summary-grid.five-columns {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .simple-hero {
@@ -1095,8 +1142,7 @@ button:disabled {
   .cohort-profile-form,
   .button-row,
   .button-row.three-columns,
-  .summary-grid,
-  .summary-grid.five-columns {
+  .summary-grid {
     grid-template-columns: 1fr;
   }
 

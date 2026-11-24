@@ -48,9 +48,9 @@ export const QUICK_MESSAGE_TEMPLATES: QuickMessageTemplate[] = [
     title: '단위기간 종료',
     category: '단위기간 종료',
     description: '단위기간 종료 시 Slack에 공유하는 기본 보고 문구 템플릿입니다.',
-    template: `*[과정명_n기] n차 단위기간(훈련일수 n일)*
-*- 출석률 50%미만* : 없음
-*- 공가 사용자* : 0명`
+    template: `**[과정명_n기] n차 단위기간(훈련일수 n일)**
+**- 출석률 50%미만** : 없음
+**- 공가 사용자** : 0명`
   },
   {
     id: 'instructor-morning-attendance-share',
@@ -58,7 +58,7 @@ export const QUICK_MESSAGE_TEMPLATES: QuickMessageTemplate[] = [
     category: '강사 공유',
     description: '주강사님께 오전 출결 현황을 공유합니다.',
     savedKey: 'instructorMorningAttendanceShare',
-    copyMode: 'plainText',
+    copyMode: 'richText',
     template: `**[오전 출결현황 공유]**
 
 강사님 안녕하세요.
@@ -79,7 +79,7 @@ export const QUICK_MESSAGE_TEMPLATES: QuickMessageTemplate[] = [
     category: '강사 공유',
     description: '주강사님께 오후 출결 현황을 공유합니다.',
     savedKey: 'instructorAfternoonAttendanceShare',
-    copyMode: 'plainText',
+    copyMode: 'richText',
     template: `**[오후 출결현황 공유]**
 
 강사님 안녕하세요.
@@ -151,7 +151,7 @@ export function generateSpotCheckResultMessage(date = new Date(), cohortName = '
   const reportDate = `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}(${formatDayOfWeek(date)})`;
   const displayCohortName = cohortName.trim() || '0기';
 
-  return `*[${displayCohortName}] ${reportDate} n교시 불시점검 공유* (@행정지원매니저 태그)
+  return `**[${displayCohortName}] ${reportDate} n교시 불시점검 공유** (@행정지원매니저 태그)
 - 점검 결과: 특이사항 00명`;
 }
 

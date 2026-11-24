@@ -33,11 +33,3 @@ export interface UpdateTodoInput {
   category?: string;
   dueDate?: string;
 }
-
-export interface TodoStats {
-  total: number;
-  todo: number;
-  inProgress: number;
-  done: number;
-  hold: number;
-}
