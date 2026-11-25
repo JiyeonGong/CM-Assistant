@@ -70,20 +70,22 @@ export function generateAfternoonAttendanceReport(summary: AttendanceSummary): s
 }
 
 export function generateFinalAttendanceReport(summary: AttendanceSummary): string {
-  const finalAbsentPeople = getUniquePeople([...summary.absentPeople, ...summary.missingEntryPeople, ...summary.qrMissingPeople]);
+  const finalAbsentPeople = getUniquePeople(summary.finalAbsentPeople);
   const finalAbsentDisplayPeople = removeMissingEntryNotes(finalAbsentPeople);
   const finalAbsentNames = new Set(finalAbsentPeople.map((person) => person.name));
+  const qrMissingPeople = getUniquePeople(summary.finalQrMissingPeople.filter((person) => !finalAbsentNames.has(person.name)));
+  const qrMissingNames = new Set(qrMissingPeople.map((person) => person.name));
   const exceptionPeople = [...summary.latePeople, ...summary.outingPeople, ...summary.earlyLeavePeople].filter(
-    (person) => !finalAbsentNames.has(person.name)
+    (person) => !finalAbsentNames.has(person.name) && !qrMissingNames.has(person.name)
   );
-  const qrMissingPeople = summary.qrMissingPeople.filter((person) => !finalAbsentNames.has(person.name));
   const exceptionCount = countUniquePeople(exceptionPeople);
-  const finalPresentCount = Math.max(summary.totalCount - countUniquePeople([...exceptionPeople, ...finalAbsentPeople]), 0);
+  const finalPresentCount = Math.max(summary.totalCount - countUniquePeople([...exceptionPeople, ...qrMissingPeople, ...finalAbsentPeople]), 0);
 
   return [
     `**[${summary.cohortName}] ${summary.date}(${summary.dayOfWeek}) 최종 확정 출결 공유**`,
     `- **출석:** ${finalPresentCount}명(전체 ${summary.totalCount}명)`,
-    `- **퇴실 QR 미촬영:** ${qrMissingPeople.length}명${formatPeopleInline(qrMissingPeople)}`,
+    `- **퇴실 QR 미촬영:** ${qrMissingPeople.length}명`,
+    formatNestedPeopleLines(qrMissingPeople),
     `- **지각/외출/조퇴:** ${exceptionCount}명`,
     formatNestedPeopleLines(exceptionPeople),
     '',

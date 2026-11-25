@@ -30,6 +30,8 @@ export interface AttendanceSummary {
   officialLeavePeople: PersonNote[];
   missingEntryPeople: PersonNote[];
   absentPeople: PersonNote[];
+  finalAbsentPeople: PersonNote[];
+  finalQrMissingPeople: PersonNote[];
   reviewRequestCount: number;
   reviewResultText: string;
   sourceFileName: string;
