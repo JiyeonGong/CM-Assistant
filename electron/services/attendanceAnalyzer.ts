@@ -98,6 +98,8 @@ function analyzeAttendanceRows({
   const officialLeavePeople: PersonNote[] = [];
   const missingEntryPeople: PersonNote[] = [];
   const qrMissingPeople: PersonNote[] = [];
+  const finalAbsentPeople: PersonNote[] = [];
+  const finalQrMissingPeople: PersonNote[] = [];
 
   let totalCount = 0;
   let presentCount = 0;
@@ -144,6 +146,14 @@ function analyzeAttendanceRows({
 
     if (QR_REQUIRED_STATUSES.has(attendanceStatus) && !isUnderHalfAttendance && !isOfficialLeave && !exitTime) {
       qrMissingPeople.push({ name });
+    }
+
+    if (entryTime && !exitTime && !isOfficialLeave) {
+      finalQrMissingPeople.push({ name });
+    }
+
+    if (!entryTime && !exitTime && !isOfficialLeave) {
+      finalAbsentPeople.push({ name, note: isUnderHalfAttendance ? '100분의50미만' : undefined });
     }
 
     if (isAbsent) {
@@ -205,6 +215,8 @@ function analyzeAttendanceRows({
     officialLeavePeople,
     missingEntryPeople,
     absentPeople,
+    finalAbsentPeople,
+    finalQrMissingPeople,
     reviewRequestCount,
     reviewResultText: reviewNotes.length > 0 ? reviewNotes.join(' / ') : '이상 없음',
     sourceFileName
